@@ -11,9 +11,9 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv, find_dotenv
-from pathlib import Path
 
 load_dotenv(find_dotenv())
 
@@ -34,6 +34,7 @@ DEBUG = True
 # Application definition
 
 INSTALLED_APPS = [
+    'stocks.apps.StocksConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
 ]
