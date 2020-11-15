@@ -1,5 +1,6 @@
 import datetime
 import time
+import logging
 from uuid import uuid4
 from typing import Sequence, Tuple, Mapping, Set, Optional
 from functools import reduce
@@ -16,12 +17,15 @@ from stocks.models import Exchange, Stock, DailySummary
 import stocks.helpers.crawler as crawlers
 
 
+logger = logging.getLogger(__name__)
+
+
 class Command(BaseCommand):
     EXCHANGE_KEY = 'exchange'
     DATE_KEY = 'date'
     FROM_KEY = 'from'
     TO_KEY = 'to'
-    TIMEOUT = 5
+    TIMEOUT = 15
 
     help = 'Dump daily summary of a exchange'
 
@@ -107,7 +111,7 @@ class Command(BaseCommand):
         date = cls.parse_date(date_text)
 
         if date not in get_calendar(exchange.calendar_code).opens:
-            print(f'{date_text}: skip')
+            logger.info('%s: skipped', date_text)
             return True
 
         try:
@@ -132,10 +136,10 @@ class Command(BaseCommand):
                 ))
             DailySummary.objects.bulk_create(summaries)
 
-            print(f'{date_text}: success')
+            logger.info('%s: success', date_text)
             return False
-        except Exception as ex:  # pylint: disable=broad-except
-            print(f'{date_text}: failed ({ex})')
+        except Exception:  # pylint: disable=broad-except
+            logger.exception('%s: failed', date_text)
             return False
 
     def handle(self, *args, **options):
