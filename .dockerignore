@@ -1,0 +1,12 @@
+env/
+__pycache__/
+.vscode/
+k8s/
+.git/
+
+.env
+.gitignore
+.pylintrc
+.dockerignore
+dev-requirements.txt
+Dockerfile
