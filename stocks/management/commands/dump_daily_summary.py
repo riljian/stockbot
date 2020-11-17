@@ -1,3 +1,4 @@
+import time
 import datetime
 import logging
 from uuid import uuid4
@@ -152,8 +153,6 @@ class Command(BaseCommand):
                 date_text = date.strftime('%Y%m%d')
                 skipped = self.dump_daily_summary(exchange_code, date_text)
                 if not skipped:
-                    # time.sleep(self.TIMEOUT)
-                    # storing data into database costs 50 seconds
-                    pass
+                    time.sleep(self.TIMEOUT)
         else:
             self.dump_daily_summary(exchange_code, date_text)
