@@ -18,13 +18,13 @@ spec:
         - image: mysql:8
           name: mysql
           args:
-            - "--default-authentication-plugin=mysql_native_password"
+            - '--default-authentication-plugin=mysql_native_password'
           env:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: mysql
-                  key: password
+                  key: root_password
           ports:
             - containerPort: 3306
               name: mysql

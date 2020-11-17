@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dump-daily-summary
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      name: dump-daily-summary
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: stockbot
+          image: asia.gcr.io/riljian/stockbot:0.0.3
+          args:
+            [
+              'dump_daily_summary',
+              '--exchange',
+              'TWSE',
+              '--from',
+              '20180122',
+              '--to',
+              '20201113',
+            ]
+          env:
+            - name: DB_HOST
+              value: mysql
+            - name: DB_PORT
+              value: '3306'
+            - name: DB_NAME
+              value: stockbot
+            - name: DB_USER
+              value: stockbot
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql
+                  key: stockbot_password
