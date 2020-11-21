@@ -149,7 +149,7 @@ class Command(BaseCommand):
         to_date_text = options.get(self.TO_KEY, None)
 
         if from_date_text and to_date_text:
-            for date in pd.date_range(from_date_text, to_date_text):
+            for date in pd.date_range(from_date_text, to_date_text)[::-1]:
                 date_text = date.strftime('%Y%m%d')
                 skipped = self.dump_daily_summary(exchange_code, date_text)
                 if not skipped:
