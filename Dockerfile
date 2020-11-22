@@ -1,7 +1,7 @@
 FROM python:3.8-buster
 
-ARG GITHUB_SHA
-ARG IMAGE_VERSION
+ARG COMMIT_SHA
+ENV COMMIT_SHA=${COMMIT_SHA}
 
 RUN mkdir /stockbot
 WORKDIR /stockbot
