@@ -111,7 +111,7 @@ class Command(BaseCommand):
         date = cls.parse_date(date_text)
 
         if date not in get_calendar(exchange.calendar_code).opens:
-            logger.info('%s: skipped', date_text)
+            logger.info('%s %s: skipped', exchange_code, date_text)
             return True
 
         try:
@@ -136,10 +136,10 @@ class Command(BaseCommand):
                 ))
             DailySummary.objects.bulk_create(summaries)
 
-            logger.info('%s: success', date_text)
+            logger.info('%s %s: success', exchange_code, date_text)
             return False
         except Exception:  # pylint: disable=broad-except
-            logger.exception('%s: failed', date_text)
+            logger.exception('%s %s: failed', exchange_code, date_text)
             return False
 
     def handle(self, *args, **options):
