@@ -41,9 +41,15 @@ class TwseCrawler(ExchangeCrawler):
     ORIGIN = 'https://www.twse.com.tw'
 
     @classmethod
-    def process_daily_sumary_response(cls, response) -> pd.DataFrame:
-        daily_quotes_table_index = -1
-        target_columns_level = 2
+    def get_parsing_offset(cls, date):
+        if date <= datetime.datetime.strptime('20110729', '%Y%m%d'):
+            return -2, 1
+        return -1, 2
+
+    @classmethod
+    def process_daily_sumary_response(cls, response, date) -> pd.DataFrame:
+        daily_quotes_table_index, target_columns_level = \
+            cls.get_parsing_offset(date)
         rename_mapper = {
             'Security Code': 'code',
             'Trade Volume': 'trade_volume',
@@ -78,4 +84,4 @@ class TwseCrawler(ExchangeCrawler):
             url=f'{cls.ORIGIN}{path}', method='get', params=params)
         if response is None:
             return None
-        return cls.process_daily_sumary_response(response)
+        return cls.process_daily_sumary_response(response, date)
