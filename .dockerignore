@@ -11,3 +11,4 @@ k8s/
 .dockerignore
 dev-requirements.txt
 Dockerfile
+README.md
