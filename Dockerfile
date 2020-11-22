@@ -1,5 +1,8 @@
 FROM python:3.8-buster
 
+ARG GITHUB_SHA
+ARG GITHUB_REF
+
 RUN mkdir /stockbot
 WORKDIR /stockbot
 
