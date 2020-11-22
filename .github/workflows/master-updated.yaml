@@ -1,9 +1,8 @@
-name: Master updated
+name: Release
 
 on:
-  push:
-    branches:
-      - master
+  release:
+    types: [created]
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT }}
@@ -32,11 +31,11 @@ jobs:
       - name: Build
         run: |-
           docker build \
-            --tag "$CONTAINER_REGISTRY/$PROJECT_ID/$IMAGE:$GITHUB_SHA" \
+            --tag "$CONTAINER_REGISTRY/$PROJECT_ID/$IMAGE:$GITHUB_REF" \
             --build-arg GITHUB_SHA="$GITHUB_SHA" \
             --build-arg GITHUB_REF="$GITHUB_REF" \
             .
 
       - name: Publish
         run: |-
-          docker push "$CONTAINER_REGISTRY/$PROJECT_ID/$IMAGE:$GITHUB_SHA"
+          docker push "$CONTAINER_REGISTRY/$PROJECT_ID/$IMAGE:$GITHUB_REF"
