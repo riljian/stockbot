@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'stocks.apps.StocksConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -49,6 +50,13 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'stockbot.urls'
 
 WSGI_APPLICATION = 'stockbot.wsgi.application'
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ]
+}
 
 
 # Database
