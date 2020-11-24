@@ -51,12 +51,12 @@ class Command(BaseCommand):
 
     @staticmethod
     def parse_exchange(value: str) -> Tuple[Exchange, crawlers.ExchangeCrawler]:
-        crawler = getattr(crawlers, pascalcase(f'{value} crawler'))
+        crawler_cls = getattr(crawlers, pascalcase(f'{value} crawler'))
 
-        if crawler is None:
+        if crawler_cls is None:
             raise CommandError('crawler not found')
 
-        return Exchange.objects.get(code=value), crawler
+        return Exchange.objects.get(code=value), crawler_cls
 
     @staticmethod
     def fill_missing_stock(exchange: Exchange, stock_codes: Sequence[str]) -> None:
@@ -107,7 +107,7 @@ class Command(BaseCommand):
 
     @classmethod
     def dump_daily_summary(cls, exchange_code: str, date_text: Optional[str] = None) -> bool:
-        exchange, crawler = cls.parse_exchange(exchange_code)
+        exchange, crawler_cls = cls.parse_exchange(exchange_code)
         date = cls.parse_date(date_text)
 
         if date not in get_calendar(exchange.calendar_code).opens:
@@ -115,7 +115,7 @@ class Command(BaseCommand):
             return True
 
         try:
-            daily_exchange_summary_df = crawler.get_daily_summary(date)
+            daily_exchange_summary_df = crawler_cls.get_daily_summary(date)
             daily_exchange_summary = \
                 cls.trans_summary_df_to_dict(daily_exchange_summary_df)
             stock_codes = daily_exchange_summary.keys()
