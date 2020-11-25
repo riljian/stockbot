@@ -15,19 +15,26 @@ spec:
         app: mysql
     spec:
       containers:
-        - image: mysql:8
-          name: mysql
+        - name: mysql
+          image: mysql:8
           args:
             - '--default-authentication-plugin=mysql_native_password'
+          ports:
+            - containerPort: 3306
+              name: mysql
+          resources:
+            limits:
+              cpu: '1500m'
+              memory: '2048Mi'
+            requests:
+              cpu: '10m'
+              memory: '1536Mi'
           env:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: mysql
                   key: root_password
-          ports:
-            - containerPort: 3306
-              name: mysql
           volumeMounts:
             - name: mysql-persistent-storage
               mountPath: /var/lib/mysql

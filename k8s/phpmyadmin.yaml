@@ -15,10 +15,18 @@ spec:
         app: phpmyadmin
     spec:
       containers:
-        - image: phpmyadmin:5
-          name: phpmyadmin
+        - name: phpmyadmin
+          image: phpmyadmin:5
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            limits:
+              cpu: '250m'
+              memory: '256Mi'
+            requests:
+              cpu: '1m'
+              memory: '64Mi'
           env:
             - name: PMA_HOST
               value: mysql
-          ports:
-            - containerPort: 80
