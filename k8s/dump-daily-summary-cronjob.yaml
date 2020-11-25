@@ -17,7 +17,7 @@ spec:
               command: ['/bin/sh', '-c']
               args:
                 - |
-                  python manage.py dump-daily-summary --exchange TWSE --date $(date +"%Y%m%d")
+                  python manage.py dump_daily_summary --exchange TWSE --date $(date +"%Y%m%d")
               env:
                 - name: DB_HOST
                   value: mysql
