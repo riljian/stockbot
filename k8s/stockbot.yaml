@@ -1,27 +1,33 @@
-apiVersion: batch/v1
-kind: Job
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: dump-daily-summary
+  name: stockbot
+  labels:
+    app: stockbot
 spec:
-  backoffLimit: 0
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stockbot
   template:
     metadata:
-      name: dump-daily-summary
+      labels:
+        app: stockbot
     spec:
-      restartPolicy: Never
       containers:
         - name: stockbot
           image: asia.gcr.io/riljian/stockbot
-          args:
-            [
-              'dump_daily_summary',
-              '--exchange',
-              'TWSE',
-              '--from',
-              '20180122',
-              '--to',
-              '20201113'
-            ]
+          args: ['runserver', '0.0.0.0:8000']
+          ports:
+            - containerPort: 8000
+              name: api
+          resources:
+            limits:
+              cpu: '500m'
+              memory: '1024Mi'
+            requests:
+              cpu: '10m'
+              memory: '256Mi'
           env:
             - name: DB_HOST
               value: mysql
