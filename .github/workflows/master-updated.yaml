@@ -6,13 +6,14 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT }}
-  K8S_CLUSTER: ${{ secrets.K8S_CLUSTER }}
-  CONTAINER_REGISTRY: asia.gcr.io
+  GKE_CLUSTER: ${{ secrets.GKE_CLUSTER }}
+  GKE_ZONE: ${{ secrets.GKE_ZONE }}
+  CONTAINER_REGISTRY_HOST: ${{ secrets.CONTAINER_REGISTRY_HOST}}
   IMAGE: stockbot
 
 jobs:
   build-publish:
-    name: Build, Publish
+    name: Build, Publish, Deploy
     runs-on: ubuntu-latest
 
     steps:
@@ -27,8 +28,8 @@ jobs:
 
       - name: Configure Docker to use the gcloud command-line tool as a credential helper for authentication
         run: |-
-          gcloud --quiet auth configure-docker "$CONTAINER_REGISTRY"
-          gcloud --quiet container clusters get-credentials "$K8S_CLUSTER"
+          gcloud --quiet auth configure-docker "$CONTAINER_REGISTRY_HOST"
+          gcloud --quiet container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
 
       - name: Get the image version
         run: echo "IMAGE_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
@@ -36,15 +37,15 @@ jobs:
       - name: Build
         run: |-
           docker build \
-            --tag "$CONTAINER_REGISTRY/$PROJECT_ID/$IMAGE:$IMAGE_VERSION" \
+            --tag "$CONTAINER_REGISTRY_HOST/$PROJECT_ID/$IMAGE:$IMAGE_VERSION" \
             --build-arg COMMIT_SHA="$GITHUB_SHA" \
             .
 
       - name: Publish
         run: |-
-          docker push "$CONTAINER_REGISTRY/$PROJECT_ID/$IMAGE:$IMAGE_VERSION"
+          docker push "$CONTAINER_REGISTRY_HOST/$PROJECT_ID/$IMAGE:$IMAGE_VERSION"
 
       - name: Deploy
         run: |-
-          kubectl set image deployments.apps/stockbot stockbot=$CONTAINER_REGISTRY/$PROJECT_ID/$IMAGE:$IMAGE_VERSION
-          kubectl set image cronjobs.batch/dump-daily-summary stockbot=$CONTAINER_REGISTRY/$PROJECT_ID/$IMAGE:$IMAGE_VERSION
+          kubectl set image deployments.apps/stockbot stockbot=$CONTAINER_REGISTRY_HOST/$PROJECT_ID/$IMAGE:$IMAGE_VERSION
+          kubectl set image cronjobs.batch/dump-daily-summary stockbot=$CONTAINER_REGISTRY_HOST/$PROJECT_ID/$IMAGE:$IMAGE_VERSION
