@@ -6,6 +6,7 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT }}
+  K8S_CLUSTER: ${{ secrets.K8S_CLUSTER }}
   CONTAINER_REGISTRY: asia.gcr.io
   IMAGE: stockbot
 
@@ -27,6 +28,7 @@ jobs:
       - name: Configure Docker to use the gcloud command-line tool as a credential helper for authentication
         run: |-
           gcloud --quiet auth configure-docker "$CONTAINER_REGISTRY"
+          gcloud --quiet container clusters get-credentials "$K8S_CLUSTER"
 
       - name: Get the image version
         run: echo "IMAGE_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
@@ -41,3 +43,8 @@ jobs:
       - name: Publish
         run: |-
           docker push "$CONTAINER_REGISTRY/$PROJECT_ID/$IMAGE:$IMAGE_VERSION"
+
+      - name: Deploy
+        run: |-
+          kubectl set image deployments.apps/stockbot stockbot=$CONTAINER_REGISTRY/$PROJECT_ID/$IMAGE:$IMAGE_VERSION
+          kubectl set image cronjobs.batch/dump-daily-summary stockbot=$CONTAINER_REGISTRY/$PROJECT_ID/$IMAGE:$IMAGE_VERSION
