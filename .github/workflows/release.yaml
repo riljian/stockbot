@@ -12,7 +12,7 @@ env:
   IMAGE: stockbot
 
 jobs:
-  build-publish:
+  build-publish-deploy:
     name: Build, Publish, Deploy
     runs-on: ubuntu-latest
 
