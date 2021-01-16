@@ -1,39 +1,74 @@
-import time
 import datetime
-from typing import Optional
+import time
+import logging
 
 import requests
 import pandas as pd
+from retrying import retry
+
+logger = logging.getLogger(__name__)
 
 
 class Crawler:
     DEFAULT_RETRY_COUNT = 3
-    DEFAULT_RETRY_TIMEOUT = 60
-    DEFAULT_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36'
+    DEFAULT_RETRY_TIMEOUT = 60000
+    DEFAULT_USER_AGENT = (
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6)'
+        ' AppleWebKit/537.36 (KHTML, like Gecko)'
+        ' Chrome/86.0.4240.183'
+        ' Safari/537.36'
+    )
+    DEFAULT_TIMEOUT_BETWEEN_SUCCESSFUL_REQUESTS = 15
 
-    # TODO: integrate with retrying module
-    @classmethod
-    def retry_request(cls, *args, **kwargs) -> Optional[requests.Response]:
+    def __init__(self, **kwargs):
+        self._user_agent = kwargs.get('user_agent', self.DEFAULT_USER_AGENT)
+        self._retry_count = kwargs.get('retry_count', self.DEFAULT_RETRY_COUNT)
+        self._retry_timeout = \
+            kwargs.get('retry_timeout', self.DEFAULT_RETRY_TIMEOUT)
+        self._timeout_between_successful_requests = \
+            kwargs.get('timeout_between_successful_requests',
+                       self.DEFAULT_TIMEOUT_BETWEEN_SUCCESSFUL_REQUESTS)
+        self.__previous_response = None
+
+    @property
+    def user_agent(self):
+        return self._user_agent
+
+    @property
+    def retry_count(self):
+        return self._retry_count
+
+    @property
+    def retry_timeout(self):
+        return self._retry_timeout
+
+    @property
+    def timeout_between_successful_requests(self):
+        return self._timeout_between_successful_requests
+
+    def request(self, *args, **kwargs) -> requests.Response:
         headers = {
-            'User-Agent': cls.DEFAULT_USER_AGENT,
+            'User-Agent': self.user_agent,
             **kwargs.get('headers', {})
         }
 
-        for _ in range(cls.DEFAULT_RETRY_COUNT):
-            try:
-                return requests.request(*args, **kwargs, headers=headers)
-            except Exception:  # pylint: disable=broad-except
-                time.sleep(cls.DEFAULT_RETRY_TIMEOUT)
+        @retry(stop_max_attempt_number=self.retry_count, wait_fixed=self.retry_timeout)
+        def wrapped_request():
+            return requests.request(*args, **kwargs, headers=headers)
 
-        return None
+        if self.__previous_response:
+            logger.debug('timeout between successful requests: %d seconds...',
+                         self.timeout_between_successful_requests)
+            time.sleep(self.timeout_between_successful_requests)
+
+        response = wrapped_request()
+        self.__previous_response = response
+        return response
 
 
 class ExchangeCrawler(Crawler):
 
-    def __init__(self, exchange):
-        self._exchange = exchange
-
-    def get_daily_summary(self, date: datetime.date) -> Optional[pd.DataFrame]:
+    def get_daily_summary(self, date: datetime.date) -> pd.DataFrame:
         pass
 
 
@@ -47,7 +82,7 @@ class TwseCrawler(ExchangeCrawler):
         return -1, 2
 
     @classmethod
-    def process_daily_sumary_response(cls, response, date) -> pd.DataFrame:
+    def process_daily_summary_response(cls, response, date) -> pd.DataFrame:
         daily_quotes_table_index, target_columns_level = \
             cls.get_parsing_offset(date)
         rename_mapper = {
@@ -72,16 +107,13 @@ class TwseCrawler(ExchangeCrawler):
         df.set_index(['code'], inplace=True)
         return df.apply(pd.to_numeric, errors='coerce')
 
-    @classmethod
-    def get_daily_summary(cls, date: datetime.date) -> Optional[pd.DataFrame]:
+    def get_daily_summary(self, date: datetime.date) -> pd.DataFrame:
         path = '/en/exchangeReport/MI_INDEX'
+        url = f'{self.ORIGIN}{path}'
         params = {
             'response': 'html',
             'date': date.strftime('%Y%m%d'),
             'type': 'ALLBUT0999',
         }
-        response = cls.retry_request(
-            url=f'{cls.ORIGIN}{path}', method='get', params=params)
-        if response is None:
-            return None
-        return cls.process_daily_sumary_response(response, date)
+        response = self.request(url=url, method='get', params=params)
+        return self.process_daily_summary_response(response, date)
