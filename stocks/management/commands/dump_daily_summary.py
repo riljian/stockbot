@@ -144,9 +144,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         exchange_code = options[self.EXCHANGE_KEY]
-        date_text = options.get(self.DATE_KEY, None)
-        from_date_text = options.get(self.FROM_KEY, None)
-        to_date_text = options.get(self.TO_KEY, None)
+        date_text = options.get(self.DATE_KEY)
+        from_date_text = options.get(self.FROM_KEY)
+        to_date_text = options.get(self.TO_KEY)
 
         if from_date_text and to_date_text:
             for date in pd.date_range(from_date_text, to_date_text)[::-1]:
