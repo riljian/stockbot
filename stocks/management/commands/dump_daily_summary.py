@@ -1,8 +1,7 @@
-import time
 import datetime
 import logging
 from uuid import uuid4
-from typing import Sequence, Tuple, Mapping, Set, Optional
+from typing import Sequence, Mapping, Set
 from functools import reduce
 
 from django.db import models
@@ -16,18 +15,23 @@ from trading_calendars import get_calendar
 from stocks.models import Exchange, Stock, DailySummary
 import stocks.helpers.crawler as crawlers
 
-
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
     EXCHANGE_KEY = 'exchange'
+    DATE_FORMAT = '%Y%m%d'
     DATE_KEY = 'date'
     FROM_KEY = 'from'
     TO_KEY = 'to'
     TIMEOUT = 15
 
     help = 'Dump daily summary of a exchange'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__exchange = None
+        self.__crawler = None
 
     def add_arguments(self, parser):
         exchange_choices = [
@@ -39,27 +43,25 @@ class Command(BaseCommand):
         parser.add_argument(f'--{self.FROM_KEY}')
         parser.add_argument(f'--{self.TO_KEY}')
 
-    @staticmethod
-    def parse_date(value: str) -> datetime.date:
-        if value:
-            try:
-                return datetime.datetime.strptime(value, '%Y%m%d')
-            except Exception as ex:
-                raise CommandError('invalid date') from ex
-        else:
-            return datetime.date.today()
+    @classmethod
+    def parse_date(cls, value: str) -> datetime.date:
+        try:
+            return datetime.datetime.strptime(value, cls.DATE_FORMAT)
+        except Exception as ex:
+            raise CommandError('invalid date') from ex
 
-    @staticmethod
-    def parse_exchange(value: str) -> Tuple[Exchange, crawlers.ExchangeCrawler]:
+    def parse_exchange(self, value: str) -> None:
         crawler_cls = getattr(crawlers, pascalcase(f'{value} crawler'))
 
         if crawler_cls is None:
             raise CommandError('crawler not found')
 
-        return Exchange.objects.get(code=value), crawler_cls
+        self.__exchange = Exchange.objects.get(code=value)
+        self.__crawler = crawler_cls()
 
     @staticmethod
     def fill_missing_stock(exchange: Exchange, stock_codes: Sequence[str]) -> None:
+        # TODO: fetch stock description by Shioaji
         existing_stock_codes = (Stock.objects
                                 .filter(exchange=exchange, code__in=stock_codes)
                                 .values_list('code', flat=True))
@@ -81,10 +83,7 @@ class Command(BaseCommand):
     @staticmethod
     def get_summary_existing_codes(exchange: Exchange, date: datetime.date) -> Set[str]:
         codes = (DailySummary.objects
-                 .filter(
-                     stock__exchange=exchange,
-                     date=date,
-                 )
+                 .filter(stock__exchange=exchange, date=date)
                  .annotate(code=models.F('stock__code'))
                  .values_list('code', flat=True))
         return set(codes)
@@ -105,24 +104,24 @@ class Command(BaseCommand):
             code: purify(exchange_summary_dict[code]) for code in exchange_summary_dict
         }
 
-    @classmethod
-    def dump_daily_summary(cls, exchange_code: str, date_text: Optional[str] = None) -> bool:
-        exchange, crawler_cls = cls.parse_exchange(exchange_code)
-        date = cls.parse_date(date_text)
+    def dump_daily_summary(self, exchange_code: str, date_text: str) -> None:
+        logger.debug(
+            '%s %s: start to dump daily summary', exchange_code, date_text)
+        date = self.parse_date(date_text)
 
-        if date not in get_calendar(exchange.calendar_code).opens:
+        if date not in get_calendar(self.__exchange.calendar_code).opens:
             logger.info('%s %s: skipped', exchange_code, date_text)
-            return True
+            return
 
         try:
-            daily_exchange_summary_df = crawler_cls.get_daily_summary(date)
+            daily_exchange_summary_df = self.__crawler.get_daily_summary(date)
             daily_exchange_summary = \
-                cls.trans_summary_df_to_dict(daily_exchange_summary_df)
+                self.trans_summary_df_to_dict(daily_exchange_summary_df)
             stock_codes = daily_exchange_summary.keys()
-            cls.fill_missing_stock(exchange, stock_codes)
-            stock_map = cls.get_stock_map(exchange, stock_codes)
+            self.fill_missing_stock(self.__exchange, stock_codes)
+            stock_map = self.get_stock_map(self.__exchange, stock_codes)
             summary_existing_codes = \
-                cls.get_summary_existing_codes(exchange, date)
+                self.get_summary_existing_codes(self.__exchange, date)
 
             summaries = []
             for code in set(stock_codes) - summary_existing_codes:
@@ -137,22 +136,21 @@ class Command(BaseCommand):
             DailySummary.objects.bulk_create(summaries)
 
             logger.info('%s %s: success', exchange_code, date_text)
-            return False
         except Exception:  # pylint: disable=broad-except
             logger.exception('%s %s: failed', exchange_code, date_text)
-            return False
 
     def handle(self, *args, **options):
         exchange_code = options[self.EXCHANGE_KEY]
-        date_text = options.get(self.DATE_KEY)
         from_date_text = options.get(self.FROM_KEY)
         to_date_text = options.get(self.TO_KEY)
 
+        self.parse_exchange(exchange_code)
+
         if from_date_text and to_date_text:
             for date in pd.date_range(from_date_text, to_date_text)[::-1]:
-                date_text = date.strftime('%Y%m%d')
-                skipped = self.dump_daily_summary(exchange_code, date_text)
-                if not skipped:
-                    time.sleep(self.TIMEOUT)
+                date_text = date.strftime(self.DATE_FORMAT)
+                self.dump_daily_summary(exchange_code, date_text)
         else:
+            default_date = datetime.date.today().strftime(self.DATE_FORMAT)
+            date_text = options.get(self.DATE_KEY, default_date)
             self.dump_daily_summary(exchange_code, date_text)
