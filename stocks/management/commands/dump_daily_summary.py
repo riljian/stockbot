@@ -9,11 +9,9 @@ from django.core.management.base import BaseCommand, CommandError
 
 import numpy as np
 import pandas as pd
-from caseconverter import pascalcase
 from trading_calendars import get_calendar
 
 from stocks.models import Exchange, Stock, DailySummary
-import stocks.helpers.crawler as crawlers
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +29,6 @@ class Command(BaseCommand):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__exchange = None
-        self.__crawler = None
 
     def add_arguments(self, parser):
         exchange_choices = [
@@ -50,26 +47,15 @@ class Command(BaseCommand):
         except Exception as ex:
             raise CommandError('invalid date') from ex
 
-    def parse_exchange(self, value: str) -> None:
-        crawler_cls = getattr(crawlers, pascalcase(f'{value} crawler'))
-
-        if crawler_cls is None:
-            raise CommandError('crawler not found')
-
-        self.__exchange = Exchange.objects.get(code=value)
-        self.__crawler = crawler_cls()
-
-    @staticmethod
-    def fill_missing_stock(exchange: Exchange, stock_codes: Sequence[str]) -> None:
-        # TODO: fetch stock description by Shioaji
+    def fill_missing_stock(self, stock_codes: Sequence[str]) -> None:
         existing_stock_codes = (Stock.objects
-                                .filter(exchange=exchange, code__in=stock_codes)
+                                .filter(exchange=self.__exchange, code__in=stock_codes)
                                 .values_list('code', flat=True))
 
         missing_codes = set(stock_codes) - set(existing_stock_codes)
         if len(missing_codes) > 0:
             missing_stocks = map(
-                lambda code: Stock(id=uuid4(), exchange=exchange, code=code), missing_codes)
+                lambda code: Stock.get_new_record(self.__exchange, code), missing_codes)
             Stock.objects.bulk_create(missing_stocks)
 
     @staticmethod
@@ -114,11 +100,11 @@ class Command(BaseCommand):
             return
 
         try:
-            daily_exchange_summary_df = self.__crawler.get_daily_summary(date)
+            daily_exchange_summary_df = self.__exchange.get_daily_summary(date)
             daily_exchange_summary = \
                 self.trans_summary_df_to_dict(daily_exchange_summary_df)
             stock_codes = daily_exchange_summary.keys()
-            self.fill_missing_stock(self.__exchange, stock_codes)
+            self.fill_missing_stock(stock_codes)
             stock_map = self.get_stock_map(self.__exchange, stock_codes)
             summary_existing_codes = \
                 self.get_summary_existing_codes(self.__exchange, date)
@@ -144,7 +130,7 @@ class Command(BaseCommand):
         from_date_text = options.get(self.FROM_KEY)
         to_date_text = options.get(self.TO_KEY)
 
-        self.parse_exchange(exchange_code)
+        self.__exchange = Exchange.objects.get(code=exchange_code)
 
         if from_date_text and to_date_text:
             for date in pd.date_range(from_date_text, to_date_text)[::-1]:
