@@ -33,10 +33,17 @@ class Exchange(models.Model):
             getattr(brokerages, pascalcase(f'{self.code} brokerage'))
         if brokerage_cls is None:
             raise ValueError('brokerage not found')
+        brokerage_cls.init_adapter()
         self._brokerage = brokerage_cls()
 
     def get_stock_name(self, code: str) -> str:
-        # TODO: fetch from database if available
+        stocks = Stock.objects.filter(exchange=self, code=code)
+        if stocks.exists():
+            stock = stocks[0]
+            if stock.description is None:
+                stock.description = self._brokerage.get_stock_name(code)
+                stock.save()
+            return stock.description
         return self._brokerage.get_stock_name(code)
 
     def get_daily_summary(self, date: datetime.date) -> pd.DataFrame:
