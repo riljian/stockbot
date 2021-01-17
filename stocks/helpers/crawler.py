@@ -1,6 +1,7 @@
 import datetime
 import time
 import logging
+from functools import reduce
 
 import requests
 import pandas as pd
@@ -20,6 +21,8 @@ class Crawler:
     )
     DEFAULT_TIMEOUT_BETWEEN_SUCCESSFUL_REQUESTS = 15
 
+    __previous_response = None
+
     def __init__(self, **kwargs):
         self._user_agent = kwargs.get('user_agent', self.DEFAULT_USER_AGENT)
         self._retry_count = kwargs.get('retry_count', self.DEFAULT_RETRY_COUNT)
@@ -28,7 +31,6 @@ class Crawler:
         self._timeout_between_successful_requests = \
             kwargs.get('timeout_between_successful_requests',
                        self.DEFAULT_TIMEOUT_BETWEEN_SUCCESSFUL_REQUESTS)
-        self.__previous_response = None
 
     @property
     def user_agent(self):
@@ -46,6 +48,10 @@ class Crawler:
     def timeout_between_successful_requests(self):
         return self._timeout_between_successful_requests
 
+    @classmethod
+    def set_previous_response(cls, value):
+        cls.__previous_response = value
+
     def request(self, *args, **kwargs) -> requests.Response:
         headers = {
             'User-Agent': self.user_agent,
@@ -62,7 +68,7 @@ class Crawler:
             time.sleep(self.timeout_between_successful_requests)
 
         response = wrapped_request()
-        self.__previous_response = response
+        self.set_previous_response(response)
         return response
 
 
@@ -117,3 +123,28 @@ class TwseCrawler(ExchangeCrawler):
         }
         response = self.request(url=url, method='get', params=params)
         return self.process_daily_summary_response(response, date)
+
+    def load_stock_candidates_by_partial_code(self, partial_code) -> dict:
+        path = '/zh/api/codeQuery'
+        url = f'{self.ORIGIN}{path}'
+        params = {
+            'query': partial_code,
+            '_': str(int(datetime.datetime.now().timestamp() * 1000))
+        }
+        response = self.request(url=url, method='get', params=params)
+        suggestions = response.json()['suggestions']
+
+        def reducer(acc, suggestion):
+            try:
+                suggestion_code, suggestion_name = suggestion.split('\t')
+                acc[suggestion_code] = suggestion_name
+            except ValueError:
+                # `show more result` would be un-splittable
+                pass
+            return acc
+
+        return reduce(reducer, suggestions, {})
+
+    def get_stock_name(self, code) -> str:
+        candidates = self.load_stock_candidates_by_partial_code(code)
+        return candidates[code]
