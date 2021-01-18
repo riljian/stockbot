@@ -32,20 +32,23 @@ jobs:
           gcloud --quiet container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
 
       - name: Get the image version
-        run: echo "IMAGE_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+        run: |-
+          echo "IMAGE_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$CONTAINER_REGISTRY_HOST/$PROJECT_ID/$IMAGE:$IMAGE_VERSION" >> $GITHUB_ENV
 
       - name: Build
         run: |-
-          docker build \
-            --tag "$CONTAINER_REGISTRY_HOST/$PROJECT_ID/$IMAGE:$IMAGE_VERSION" \
-            --build-arg COMMIT_SHA="$GITHUB_SHA" \
-            .
+          docker build --tag "$IMAGE_TAG" --build-arg COMMIT_SHA="$GITHUB_SHA" .
 
       - name: Publish
         run: |-
-          docker push "$CONTAINER_REGISTRY_HOST/$PROJECT_ID/$IMAGE:$IMAGE_VERSION"
+          docker push "$IMAGE_TAG"
+
+      - name: Migrate
+        run: |-
+          cat k8s/stockbot-migrate-job.yaml | sed "s/\(image: .*\)$/\1:$IMAGE_VERSION/" | kubectl apply -f -
 
       - name: Deploy
         run: |-
-          kubectl set image deployments.apps/stockbot stockbot=$CONTAINER_REGISTRY_HOST/$PROJECT_ID/$IMAGE:$IMAGE_VERSION
-          kubectl set image cronjobs.batch/dump-daily-summary stockbot=$CONTAINER_REGISTRY_HOST/$PROJECT_ID/$IMAGE:$IMAGE_VERSION
+          kubectl set image deployments.apps/stockbot stockbot=$IMAGE_TAG
+          kubectl set image cronjobs.batch/dump-daily-summary stockbot=$IMAGE_TAG
