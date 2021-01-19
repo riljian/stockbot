@@ -23,8 +23,13 @@ def fill_missing_stock_description(apps, schema_editor):
         crawler = crawler_cls()
         candidates = {
             **candidates,
+            **crawler.load_stock_candidates_by_partial_code(stock_code),
             **crawler.load_stock_candidates_by_partial_code(stock_code[:2]),
         }
+        cached_stock_name = candidates.get(stock_code)
+        if cached_stock_name is None:
+            logger.warning('unavailable stock name %s', stock_code)
+            continue
         logger.debug('cache miss for %s(%s)',
                      stock_code, candidates[stock_code])
         stock.description = candidates[stock_code]
