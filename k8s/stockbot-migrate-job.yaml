@@ -13,6 +13,8 @@ spec:
           image: asia.gcr.io/riljian/stockbot
           args: ['migrate']
           env:
+            - name: LOGGER_ROOT_LEVEL
+              value: DEBUG
             - name: DB_HOST
               value: mysql
             - name: DB_PORT

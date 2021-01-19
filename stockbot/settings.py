@@ -22,7 +22,8 @@ load_dotenv(find_dotenv())
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 logging.config.fileConfig(f'{BASE_DIR}/logging.ini',
-                          disable_existing_loggers=False)
+                          disable_existing_loggers=False,
+                          defaults={'logger_root_level': os.getenv('LOGGER_ROOT_LEVEL', 'INFO')},)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
