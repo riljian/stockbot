@@ -32,3 +32,13 @@ spec:
                     secretKeyRef:
                       name: mysql
                       key: stockbot_password
+                - name: BROKERAGE_ACCOUNT_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: brokerage-account
+                      key: key
+                - name: BROKERAGE_ACCOUNT_IV
+                  valueFrom:
+                    secretKeyRef:
+                      name: brokerage-account
+                      key: iv
