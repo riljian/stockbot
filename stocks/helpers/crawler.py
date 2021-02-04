@@ -83,7 +83,7 @@ class TwseCrawler(ExchangeCrawler):
 
     @classmethod
     def get_parsing_offset(cls, date):
-        if date <= datetime.datetime.strptime('20110729', '%Y%m%d'):
+        if date <= datetime.datetime.strptime('20110729Z', '%Y%m%d%z'):
             return -2, 1
         return -1, 2
 

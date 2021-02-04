@@ -43,7 +43,7 @@ class Command(BaseCommand):
     @classmethod
     def parse_date(cls, value: str) -> datetime.date:
         try:
-            return datetime.datetime.strptime(value, cls.DATE_FORMAT)
+            return datetime.datetime.strptime(f'{value}Z', f'{cls.DATE_FORMAT}%z')
         except Exception as ex:
             raise CommandError('invalid date') from ex
 

@@ -20,7 +20,7 @@ class Analyzer:
 
     def get_day_trading_candidates(self, date_text: str) -> models.QuerySet:
         calendar = get_calendar(self._exchange.calendar_code)
-        date = pd.to_datetime(date_text)
+        date = pd.to_datetime(date_text, utc=True)
         if date not in calendar.opens:
             logger.info('%s is closed on %s', self._exchange.code, date)
             return DailySummary.objects.none()
