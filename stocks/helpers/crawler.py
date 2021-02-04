@@ -113,7 +113,7 @@ class TwseCrawler(ExchangeCrawler):
         df.set_index(['code'], inplace=True)
         return df.apply(pd.to_numeric, errors='coerce')
 
-    def get_daily_summary(self, date: datetime.date) -> pd.DataFrame:
+    def get_daily_summary(self, date: datetime.datetime) -> pd.DataFrame:
         path = '/en/exchangeReport/MI_INDEX'
         url = f'{self.ORIGIN}{path}'
         params = {
