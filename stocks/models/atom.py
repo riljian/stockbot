@@ -95,6 +95,7 @@ class Exchange(models.Model):
 class StockCategory(models.Model):
     id = models.UUIDField(primary_key=True)
     name = models.CharField(max_length=255)  # 證券類別
+    brokerage_code = models.CharField(max_length=255, null=True)  # 券商定義代號
 
 
 class Stock(models.Model):

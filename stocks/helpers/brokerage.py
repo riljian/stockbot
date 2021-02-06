@@ -26,3 +26,6 @@ class TwseBrokerage(Brokerage):
         adapter = sj.Shioaji()
         adapter.login(account['user'], account['password'])
         cls._adapter = adapter
+
+    def get_stock_meta(self, code):
+        return self._adapter.Contracts.Stocks[code]
