@@ -19,3 +19,9 @@ class DailySummary(models.Model):
     last_best_bid_volume = models.IntegerField(null=True)  # 最後揭示買量
     last_best_ask_price = models.FloatField(null=True)  # 最後揭示賣價
     last_best_ask_volume = models.IntegerField(null=True)  # 最後揭示賣量
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['-date']),
+            models.Index(fields=['-date', 'stock']),
+        ]
