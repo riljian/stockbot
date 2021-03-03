@@ -1,5 +1,6 @@
 from typing import Tuple
 
+import pandas as pd
 from caseconverter import pascalcase
 
 from rest_framework import viewsets, response, decorators
@@ -24,7 +25,7 @@ class StockViewSet(viewsets.ViewSet):
     @decorators.action(detail=False, methods=['get'])
     def day_trading_candidates(self, request):
         exchange_code = request.query_params.get('exchange')
-        date_text = request.query_params.get('date')
+        date = pd.to_datetime(request.query_params.get('date'), utc=True)
         _, analyzer = self.parse_exchange(exchange_code)
-        candidates = analyzer.get_day_trading_candidates(date_text)
-        return response.Response({'data': candidates.values()})
+        candidates = analyzer.get_day_trading_candidates(date)
+        return response.Response({'data': candidates.to_dict('records')})
