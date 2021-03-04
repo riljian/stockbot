@@ -103,7 +103,7 @@ class TwseAnalyzer(Analyzer):
         calendar = self._calendar
         if date not in calendar.opens:
             logger.info('%s is closed on %s', self._exchange.code, date)
-            return DailySummary.objects.none()
+            return pd.DataFrame()
 
         prev_trading_close = self._calendar.previous_close(date)
         df = self.get_stocks()
