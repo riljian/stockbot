@@ -32,21 +32,21 @@ class TwseAnalyzer(Analyzer):
         stocks = self._exchange.stocks.values('id', 'code', 'description')
         return pd.DataFrame.from_records(data=stocks)
 
-    def filter_by_price(self, df: pd.DataFrame, date, min_price=0.0, max_price=999999.0) -> pd.DataFrame:
+    def get_price_filter(self, df: pd.DataFrame, date, min_price=0.0, max_price=999999.0) -> pd.DataFrame:
         stock_ids = (DailySummary.objects
                      .filter(date=date, closing_price__gte=min_price, closing_price__lte=max_price)
                      .values_list('stock_id', flat=True))
 
-        return df[df['id'].map(lambda stock_id: stock_id in stock_ids)]
+        return df['id'].map(lambda stock_id: stock_id in stock_ids)
 
-    def filter_by_trade_volume(self, df: pd.DataFrame, date, min_volume=0) -> pd.DataFrame:
+    def get_trade_volume_filter(self, df: pd.DataFrame, date, min_volume=0) -> pd.DataFrame:
         stock_ids = (DailySummary.objects
                      .filter(date=date, trade_volume__gte=min_volume)
                      .values_list('stock_id', flat=True))
 
-        return df[df['id'].map(lambda stock_id: stock_id in stock_ids)]
+        return df['id'].map(lambda stock_id: stock_id in stock_ids)
 
-    def filter_by_change_rate(self, df: pd.DataFrame, date, min_change_rate=0.0, days=1) -> pd.DataFrame:
+    def get_change_rate_filter(self, df: pd.DataFrame, date, min_change_rate=0.0, days=1) -> pd.DataFrame:
         base_date = \
             self._calendar.previous_close(date - pd.DateOffset(days=days - 1))
 
@@ -64,7 +64,7 @@ class TwseAnalyzer(Analyzer):
         change_rate_filter = change_rate_series > min_change_rate
         stock_ids = summary[change_rate_filter]['stock_id'].to_list()
 
-        return df[df['id'].map(lambda stock_id: stock_id in stock_ids)]
+        return df['id'].map(lambda stock_id: stock_id in stock_ids)
 
     def get_day_trading_candidates(self, date) -> pd.DataFrame:
         calendar = self._calendar
@@ -74,11 +74,11 @@ class TwseAnalyzer(Analyzer):
 
         prev_trading_close = self._calendar.previous_close(date)
         df = self.get_stocks()
-        df = self.filter_by_trade_volume(
+        volume_filter = self.get_trade_volume_filter(
             df, prev_trading_close, min_volume=50000000)
-        df = self.filter_by_price(
+        price_filter = self.get_price_filter(
             df, prev_trading_close, min_price=5.0, max_price=30.0)
-        df = self.filter_by_change_rate(
+        change_rate_filter = self.get_change_rate_filter(
             df, prev_trading_close, min_change_rate=0.04, days=1)
 
-        return df
+        return self.get_stocks()[volume_filter & price_filter & change_rate_filter]
