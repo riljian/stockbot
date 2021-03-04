@@ -52,7 +52,7 @@ class TwseAnalyzer(Analyzer):
 
         return summary['trade_volume'] >= min_volume, summary['trade_volume']
 
-    def get_change_rate_filter(self, df: pd.DataFrame, date, min_change_rate=0.0, days=1) -> pd.DataFrame:
+    def get_price_change_rate_filter(self, df: pd.DataFrame, date, min_change_rate=0.0, days=1) -> pd.DataFrame:
         base_date = \
             self._calendar.previous_close(date - pd.DateOffset(days=days - 1))
 
@@ -71,7 +71,30 @@ class TwseAnalyzer(Analyzer):
 
         change_rate_series = \
             (summary['changed_price'] - summary['price']) / summary['price']
-        change_rate_series.name = 'change_rate'
+        change_rate_series.name = 'price_change_rate'
+        change_rate_filter = change_rate_series > min_change_rate
+
+        return change_rate_filter, change_rate_series
+
+    def get_volume_change_rate_filter(self, df: pd.DataFrame, date, min_change_rate=0.0, days=1):
+        base_date = \
+            self._calendar.previous_close(date - pd.DateOffset(days=days - 1))
+
+        def get_summary_qs(d):
+            return DailySummary.objects.filter(date=d).values('stock_id', 'trade_volume')
+
+        snapshot = pd.DataFrame.from_records(data=get_summary_qs(base_date))
+        changed_snapshot = (pd.DataFrame
+                            .from_records(data=get_summary_qs(date))
+                            .rename(columns={'trade_volume': 'changed_trade_volume'}))
+
+        summary = df.join(snapshot.set_index('stock_id'), on='id')
+        summary = summary.join(changed_snapshot.set_index('stock_id'), on='id')
+
+        change_rate_series = \
+            (summary['changed_trade_volume'] - summary['trade_volume']) \
+            / summary['trade_volume']
+        change_rate_series.name = 'volume_change_rate'
         change_rate_filter = change_rate_series > min_change_rate
 
         return change_rate_filter, change_rate_series
@@ -88,10 +111,10 @@ class TwseAnalyzer(Analyzer):
             df, prev_trading_close, min_volume=50000000)
         price_filter, price_result = self.get_price_filter(
             df, prev_trading_close, min_price=5.0, max_price=30.0)
-        change_rate_filter, change_rate_result = self.get_change_rate_filter(
+        price_change_rate_filter, price_change_rate_result = self.get_price_change_rate_filter(
             df, prev_trading_close, min_change_rate=0.04, days=1)
 
         result = pd.concat(
-            [df, volume_result, price_result, change_rate_result], axis=1)
+            [df, volume_result, price_result, price_change_rate_result], axis=1)
 
-        return result[volume_filter & price_filter & change_rate_filter]
+        return result[volume_filter & price_filter & price_change_rate_filter]
