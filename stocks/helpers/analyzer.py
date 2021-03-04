@@ -33,18 +33,24 @@ class TwseAnalyzer(Analyzer):
         return pd.DataFrame.from_records(data=stocks)
 
     def get_price_filter(self, df: pd.DataFrame, date, min_price=0.0, max_price=999999.0) -> pd.DataFrame:
-        stock_ids = (DailySummary.objects
-                     .filter(date=date, closing_price__gte=min_price, closing_price__lte=max_price)
-                     .values_list('stock_id', flat=True))
+        summary_qs = (DailySummary.objects
+                      .filter(date=date)
+                      .values('stock_id', 'closing_price'))
+        snapshot = (pd.DataFrame
+                    .from_records(data=summary_qs)
+                    .rename(columns={'closing_price': 'price'}))
+        summary = df.join(snapshot.set_index('stock_id'), on='id')
 
-        return df['id'].map(lambda stock_id: stock_id in stock_ids)
+        return (summary['price'] >= min_price) & (summary['price'] <= max_price), summary['price']
 
     def get_trade_volume_filter(self, df: pd.DataFrame, date, min_volume=0) -> pd.DataFrame:
-        stock_ids = (DailySummary.objects
-                     .filter(date=date, trade_volume__gte=min_volume)
-                     .values_list('stock_id', flat=True))
+        summary_qs = (DailySummary.objects
+                      .filter(date=date)
+                      .values('stock_id', 'trade_volume'))
+        snapshot = pd.DataFrame.from_records(data=summary_qs)
+        summary = df.join(snapshot.set_index('stock_id'), on='id')
 
-        return df['id'].map(lambda stock_id: stock_id in stock_ids)
+        return summary['trade_volume'] >= min_volume, summary['trade_volume']
 
     def get_change_rate_filter(self, df: pd.DataFrame, date, min_change_rate=0.0, days=1) -> pd.DataFrame:
         base_date = \
@@ -53,18 +59,21 @@ class TwseAnalyzer(Analyzer):
         def get_summary_qs(d):
             return DailySummary.objects.filter(date=d).values('stock_id', 'closing_price')
 
-        snapshot = pd.DataFrame.from_records(data=get_summary_qs(base_date))
-        changed_snapshot = pd.DataFrame.from_records(data=get_summary_qs(date))
-        summary = snapshot.join(changed_snapshot.set_index('stock_id'),
-                                rsuffix='_changed',
-                                on='stock_id')
-        change_rate_series = \
-            (summary['closing_price_changed'] - summary['closing_price']) \
-            / summary['closing_price']
-        change_rate_filter = change_rate_series > min_change_rate
-        stock_ids = summary[change_rate_filter]['stock_id'].to_list()
+        snapshot = (pd.DataFrame
+                    .from_records(data=get_summary_qs(base_date))
+                    .rename(columns={'closing_price': 'price'}))
+        changed_snapshot = (pd.DataFrame
+                            .from_records(data=get_summary_qs(date))
+                            .rename(columns={'closing_price': 'changed_price'}))
 
-        return df['id'].map(lambda stock_id: stock_id in stock_ids)
+        summary = df.join(snapshot.set_index('stock_id'), on='id')
+        summary = summary.join(changed_snapshot.set_index('stock_id'), on='id')
+
+        change_rate_series = \
+            (summary['changed_price'] - summary['price']) / summary['price']
+        change_rate_filter = change_rate_series > min_change_rate
+
+        return change_rate_filter, change_rate_series
 
     def get_day_trading_candidates(self, date) -> pd.DataFrame:
         calendar = self._calendar
@@ -74,11 +83,11 @@ class TwseAnalyzer(Analyzer):
 
         prev_trading_close = self._calendar.previous_close(date)
         df = self.get_stocks()
-        volume_filter = self.get_trade_volume_filter(
+        volume_filter, _ = self.get_trade_volume_filter(
             df, prev_trading_close, min_volume=50000000)
-        price_filter = self.get_price_filter(
+        price_filter, _ = self.get_price_filter(
             df, prev_trading_close, min_price=5.0, max_price=30.0)
-        change_rate_filter = self.get_change_rate_filter(
+        change_rate_filter, _ = self.get_change_rate_filter(
             df, prev_trading_close, min_change_rate=0.04, days=1)
 
         return self.get_stocks()[volume_filter & price_filter & change_rate_filter]
