@@ -71,6 +71,7 @@ class TwseAnalyzer(Analyzer):
 
         change_rate_series = \
             (summary['changed_price'] - summary['price']) / summary['price']
+        change_rate_series.name = 'change_rate'
         change_rate_filter = change_rate_series > min_change_rate
 
         return change_rate_filter, change_rate_series
@@ -83,11 +84,14 @@ class TwseAnalyzer(Analyzer):
 
         prev_trading_close = self._calendar.previous_close(date)
         df = self.get_stocks()
-        volume_filter, _ = self.get_trade_volume_filter(
+        volume_filter, volume_result = self.get_trade_volume_filter(
             df, prev_trading_close, min_volume=50000000)
-        price_filter, _ = self.get_price_filter(
+        price_filter, price_result = self.get_price_filter(
             df, prev_trading_close, min_price=5.0, max_price=30.0)
-        change_rate_filter, _ = self.get_change_rate_filter(
+        change_rate_filter, change_rate_result = self.get_change_rate_filter(
             df, prev_trading_close, min_change_rate=0.04, days=1)
 
-        return self.get_stocks()[volume_filter & price_filter & change_rate_filter]
+        result = pd.concat(
+            [df, volume_result, price_result, change_rate_result], axis=1)
+
+        return result[volume_filter & price_filter & change_rate_filter]
