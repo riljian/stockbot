@@ -122,3 +122,22 @@ class Stock(models.Model):
             code=code,
             description=exchange.get_stock_name(code)
         )
+
+
+class Tick(models.Model):
+    id = models.UUIDField(primary_key=True)
+    stock = models.ForeignKey(
+        Stock, related_name='ticks', on_delete=models.CASCADE)
+    ts = models.DateTimeField()  # 成交時間
+    close = models.FloatField()  # 成交金額
+    volume = models.IntegerField()  # 成交張數
+    bid_price = models.FloatField()  # 委買金額
+    bid_volume = models.IntegerField()  # 委買張數
+    ask_price = models.FloatField()  # 委賣金額
+    ask_volume = models.IntegerField()  # 委賣張數
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['-ts']),
+            models.Index(fields=['-ts', 'stock']),
+        ]
