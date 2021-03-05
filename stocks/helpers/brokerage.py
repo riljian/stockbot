@@ -1,4 +1,5 @@
 import shioaji as sj
+import pandas as pd
 
 
 class Brokerage:
@@ -17,6 +18,12 @@ class Brokerage:
         if cls._adapter is None:
             cls.setup_adapter(*args, **kwargs)
 
+    def get_stock_meta(self, code):
+        pass
+
+    def get_ticks(self, code, date) -> pd.DataFrame:
+        pass
+
 
 class TwseBrokerage(Brokerage):
 
@@ -29,3 +36,10 @@ class TwseBrokerage(Brokerage):
 
     def get_stock_meta(self, code):
         return self._adapter.Contracts.Stocks[code]
+
+    def get_ticks(self, code, date) -> pd.DataFrame:
+        tick_raw = self._adapter.ticks(self.get_stock_meta(code),
+                                       date.strftime('%Y-%m-%d'))
+        df = pd.DataFrame({**tick_raw})
+        df['ts'] = pd.to_datetime(df['ts']).dt.tz_localize('Asia/Taipei')
+        return df
