@@ -143,5 +143,5 @@ class Tick(models.Model):
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=['stock', 'ts'], name='unique_tick')
+                fields=['stock', 'ts', 'close'], name='unique_tick')
         ]
