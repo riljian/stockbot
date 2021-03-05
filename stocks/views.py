@@ -28,4 +28,5 @@ class StockViewSet(viewsets.ViewSet):
         date = pd.to_datetime(request.query_params.get('date'), utc=True)
         _, analyzer = self.parse_exchange(exchange_code)
         candidates = analyzer.get_day_trading_candidates(date)
-        return response.Response({'data': candidates.to_dict('records')})
+        data = candidates.where(~candidates.isnull(), None).to_dict('records')
+        return response.Response({'data': data})
