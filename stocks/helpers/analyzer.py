@@ -16,6 +16,10 @@ class Analyzer:
         self._exchange = exchange
         self._calendar = get_calendar(exchange.calendar_code)
 
+    @property
+    def calendar(self):
+        return self._calendar
+
     def get_stocks(self) -> pd.DataFrame:
         pass
 
@@ -98,23 +102,3 @@ class TwseAnalyzer(Analyzer):
         change_rate_filter = change_rate_series > min_change_rate
 
         return change_rate_filter, change_rate_series
-
-    def get_day_trading_candidates(self, date) -> pd.DataFrame:
-        calendar = self._calendar
-        if date not in calendar.opens:
-            logger.info('%s is closed on %s', self._exchange.code, date)
-            return pd.DataFrame()
-
-        prev_trading_close = self._calendar.previous_close(date)
-        df = self.get_stocks()
-        volume_filter, volume_result = self.get_trade_volume_filter(
-            df, prev_trading_close, min_volume=50000000)
-        price_filter, price_result = self.get_price_filter(
-            df, prev_trading_close, min_price=5.0, max_price=30.0)
-        price_change_rate_filter, price_change_rate_result = self.get_price_change_rate_filter(
-            df, prev_trading_close, min_change_rate=0.04, days=1)
-
-        result = pd.concat(
-            [df, volume_result, price_result, price_change_rate_result], axis=1)
-
-        return result[volume_filter & price_filter & price_change_rate_filter]
