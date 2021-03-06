@@ -1,13 +1,12 @@
 import logging
-from typing import Tuple
 
 import pandas as pd
 from caseconverter import pascalcase
 
 from rest_framework import viewsets, response, decorators
 
-from stocks.models import Exchange, Stock
-import stocks.helpers.analyzer as analyzers
+from stocks.models import Stock
+import stocks.helpers.operator as operators
 
 logger = logging.getLogger(__name__)
 
@@ -17,34 +16,23 @@ class StockViewSet(viewsets.ViewSet):
     queryset = Stock.objects.all()
 
     @staticmethod
-    def parse_analyzer(value: str) -> analyzers.Analyzer:
-        analyzer_cls = getattr(analyzers, pascalcase(f'{value} analyzer'))
+    def parse_operator(value: str) -> operators.Operator:
+        operator_cls = getattr(operators, pascalcase(f'{value} operator'))
 
-        if analyzer_cls is None:
-            raise ValueError('analyzer not found')
+        if operator_cls is None:
+            raise ValueError('operator not found')
 
-        return analyzer_cls()
+        return operator_cls()
 
     @decorators.action(detail=False, methods=['get'])
     def day_trading_candidates(self, request):
         exchange_code = request.query_params.get('exchange')
         date = pd.to_datetime(request.query_params.get('date'), utc=True)
-        analyzer = self.parse_analyzer(exchange_code)
+        operator = self.parse_operator(exchange_code)
 
-        if date not in analyzer.calendar.opens:
+        if date not in operator.analyzer.calendar.opens:
             logger.info('%s is closed on %s', exchange_code, date)
             return response.Response({'data': []})
 
-        prev_trading_close = analyzer.calendar.previous_close(date)
-        df = analyzer.get_stocks()
-        volume_filter, volume_result = \
-            analyzer.get_trade_volume_filter(df, prev_trading_close, min_volume=50000000)
-        price_filter, price_result = \
-            analyzer.get_price_filter(df, prev_trading_close, min_price=5.0, max_price=30.0)
-        price_change_rate_filter, price_change_rate_result = \
-            analyzer.get_price_change_rate_filter(df, prev_trading_close, min_change_rate=0.04, days=1)
-
-        result = pd.concat([df, volume_result, price_result, price_change_rate_result], axis=1)
-        candidates = result[volume_filter & price_filter & price_change_rate_filter]
-        data = candidates.where(~candidates.isnull(), None).to_dict('records')
-        return response.Response({'data': data})
+        candidates = operator.get_day_trade_candidates(date)
+        return response.Response({'data': candidates.mask(candidates.isnull(), None).to_dict('records')})
