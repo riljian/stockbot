@@ -17,22 +17,22 @@ class StockViewSet(viewsets.ViewSet):
     queryset = Stock.objects.all()
 
     @staticmethod
-    def parse_exchange(value: str) -> Tuple[Exchange, analyzers.Analyzer]:
+    def parse_analyzer(value: str) -> analyzers.Analyzer:
         analyzer_cls = getattr(analyzers, pascalcase(f'{value} analyzer'))
 
         if analyzer_cls is None:
             raise ValueError('analyzer not found')
 
-        return Exchange.objects.get(code=value), analyzer_cls()
+        return analyzer_cls()
 
     @decorators.action(detail=False, methods=['get'])
     def day_trading_candidates(self, request):
         exchange_code = request.query_params.get('exchange')
         date = pd.to_datetime(request.query_params.get('date'), utc=True)
-        exchange, analyzer = self.parse_exchange(exchange_code)
+        analyzer = self.parse_analyzer(exchange_code)
 
         if date not in analyzer.calendar.opens:
-            logger.info('%s is closed on %s', exchange.code, date)
+            logger.info('%s is closed on %s', exchange_code, date)
             return response.Response({'data': []})
 
         prev_trading_close = analyzer.calendar.previous_close(date)
