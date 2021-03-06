@@ -18,6 +18,10 @@ class Analyzer:
     def calendar(self):
         return self._calendar
 
+    @property
+    def exchange(self):
+        return self._exchange
+
     def get_stocks(self) -> pd.DataFrame:
         pass
 

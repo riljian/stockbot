@@ -10,6 +10,14 @@ class Operator:
     def analyzer(self):
         return self._analyzer
 
+    @property
+    def exchange(self):
+        return self.analyzer.exchange
+
+    @property
+    def brokerage(self):
+        return self.exchange.brokerage
+
     def get_day_trade_candidates(self, date) -> pd.DataFrame:
         pass
 
