@@ -25,3 +25,18 @@ class DailySummary(models.Model):
             models.Index(fields=['-date']),
             models.Index(fields=['-date', 'stock']),
         ]
+
+
+class BackTestRecord(models.Model):
+    id = models.UUIDField(primary_key=True)
+    no = models.UUIDField()
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE)
+    price = models.FloatField()
+    volume = models.IntegerField()
+    ts = models.DateTimeField()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['no']),
+            models.Index(fields=['no', 'stock']),
+        ]
