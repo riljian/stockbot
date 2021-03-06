@@ -1,6 +1,8 @@
 env/
 __pycache__/
 .vscode/
+.idea/
 
 .env
 shioaji.log
+.DS_store

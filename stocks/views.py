@@ -38,21 +38,13 @@ class StockViewSet(viewsets.ViewSet):
         prev_trading_close = analyzer.calendar.previous_close(date)
         df = analyzer.get_stocks()
         volume_filter, volume_result = \
-            analyzer.get_trade_volume_filter(df,
-                                             prev_trading_close,
-                                             min_volume=50000000)
+            analyzer.get_trade_volume_filter(df, prev_trading_close, min_volume=50000000)
         price_filter, price_result = \
-            analyzer.get_price_filter(df, prev_trading_close,
-                                      min_price=5.0,
-                                      max_price=30.0)
+            analyzer.get_price_filter(df, prev_trading_close, min_price=5.0, max_price=30.0)
         price_change_rate_filter, price_change_rate_result = \
-            analyzer.get_price_change_rate_filter(df, prev_trading_close,
-                                                  min_change_rate=0.04,
-                                                  days=1)
+            analyzer.get_price_change_rate_filter(df, prev_trading_close, min_change_rate=0.04, days=1)
 
-        result = pd.concat([df, volume_result, price_result, price_change_rate_result],
-                           axis=1)
-        candidates = \
-            result[volume_filter & price_filter & price_change_rate_filter]
+        result = pd.concat([df, volume_result, price_result, price_change_rate_result], axis=1)
+        candidates = result[volume_filter & price_filter & price_change_rate_filter]
         data = candidates.where(~candidates.isnull(), None).to_dict('records')
         return response.Response({'data': data})
