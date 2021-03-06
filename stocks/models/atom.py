@@ -88,7 +88,6 @@ class Exchange(models.Model):
         return self.crawler.get_stock_name(code)
 
     def get_daily_summary(self, date: datetime.date) -> pd.DataFrame:
-        # TODO: fetch from database if available
         return self.crawler.get_daily_summary(date)
 
 
