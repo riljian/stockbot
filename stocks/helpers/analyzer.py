@@ -3,8 +3,6 @@ import logging
 import pandas as pd
 from trading_calendars import get_calendar
 
-from django.db import models
-
 from stocks.models import DailySummary, Exchange
 
 logger = logging.getLogger(__name__)
@@ -50,7 +48,8 @@ class TwseAnalyzer(Analyzer):
         stocks = self._exchange.stocks.values('id', 'code', 'description')
         return pd.DataFrame.from_records(data=stocks)
 
-    def get_price_filter(self, df: pd.DataFrame, date, min_price=0.0, max_price=999999.0) -> pd.DataFrame:
+    def get_price_filter(self, df: pd.DataFrame,
+                         date, min_price=0.0, max_price=999999.0) -> pd.DataFrame:
         summary_qs = (DailySummary.objects
                       .filter(date=date)
                       .values('stock_id', 'closing_price'))
@@ -70,7 +69,8 @@ class TwseAnalyzer(Analyzer):
 
         return summary['trade_volume'] >= min_volume, summary['trade_volume']
 
-    def get_price_change_rate_filter(self, df: pd.DataFrame, date, min_change_rate=0.0, days=1) -> pd.DataFrame:
+    def get_price_change_rate_filter(self, df: pd.DataFrame,
+                                     date, min_change_rate=0.0, days=1) -> pd.DataFrame:
         base_date = \
             self._calendar.previous_close(date - pd.DateOffset(days=days - 1))
 
