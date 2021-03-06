@@ -5,7 +5,7 @@ import lxml.html
 
 from django.db import migrations
 
-from stocks.models.atom import StockCategory
+from stocks.models import StockCategory
 
 logger = logging.getLogger(__name__)
 

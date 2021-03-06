@@ -2,7 +2,7 @@ import logging
 
 from django.db import migrations
 
-from stocks.models.atom import Stock, Exchange
+from stocks.models import Stock, Exchange
 
 logger = logging.getLogger(__name__)
 
