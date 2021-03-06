@@ -1,14 +1,14 @@
-import os
 import datetime
+import os
 from uuid import uuid4
 
-from caseconverter import pascalcase
 import pandas as pd
+from caseconverter import pascalcase
 from django.db import models
 
-from utils import AESEncoder
-import stocks.helpers.crawler as crawlers
 import stocks.helpers.brokerage as brokerages
+import stocks.helpers.crawler as crawlers
+from utils import AESEncoder
 
 
 class Exchange(models.Model):
@@ -125,8 +125,7 @@ class Stock(models.Model):
 
 class Tick(models.Model):
     id = models.UUIDField(primary_key=True)
-    stock = models.ForeignKey(
-        Stock, related_name='ticks', on_delete=models.CASCADE)
+    stock = models.ForeignKey(Stock, related_name='ticks', on_delete=models.CASCADE)
     ts = models.DateTimeField()  # 成交時間
     close = models.FloatField()  # 成交金額
     volume = models.IntegerField()  # 成交張數
