@@ -4,7 +4,7 @@ import logging
 
 from django.db import migrations
 
-from stocks.models.atom import Stock, Exchange, StockCategory
+from stocks.models import Stock, Exchange, StockCategory
 from stocks.helpers.brokerage import TwseBrokerage
 
 logger = logging.getLogger(__name__)

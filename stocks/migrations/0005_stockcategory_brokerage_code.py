@@ -2,7 +2,7 @@
 
 from django.db import migrations, models
 
-from stocks.models.atom import Stock, Exchange, StockCategory
+from stocks.models import StockCategory
 
 
 def adopt_new_category_field(apps, schema_editor):
