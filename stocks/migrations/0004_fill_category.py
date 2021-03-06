@@ -5,7 +5,6 @@ import logging
 from django.db import migrations
 
 from stocks.models import Stock, Exchange, StockCategory
-from stocks.helpers.brokerage import TwseBrokerage
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +12,7 @@ logger = logging.getLogger(__name__)
 def fill_category(apps, schema_editor):
 
     exchange = Exchange.objects.get(code='TWSE')
-    brokerage: TwseBrokerage = exchange.brokerage
+    brokerage = exchange.brokerage
 
     timeout_counter = 0
 
