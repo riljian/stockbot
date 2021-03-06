@@ -46,7 +46,7 @@ class TwseBrokerage(Brokerage):
 
         tick_qs = stock.ticks.filter(ts__gte=from_ts, ts__lte=to_ts)
         if tick_qs.exists():
-            df = pd.DataFrame.from_records(data=tick_qs.values(*tick_keys))
+            df = pd.DataFrame.from_records(data=tick_qs.values(*tick_keys).order_by('ts'))
             df['ts'] = df['ts'].dt.tz_convert(self.TIMEZONE)
         else:
             Tick = stock.ticks.model  # pylint: disable=invalid-name
