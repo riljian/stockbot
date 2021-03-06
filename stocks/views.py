@@ -1,3 +1,4 @@
+import logging
 from typing import Tuple
 
 import pandas as pd
@@ -7,6 +8,8 @@ from rest_framework import viewsets, response, decorators
 
 from stocks.models import Exchange, Stock
 import stocks.helpers.analyzer as analyzers
+
+logger = logging.getLogger(__name__)
 
 
 class StockViewSet(viewsets.ViewSet):
@@ -29,7 +32,7 @@ class StockViewSet(viewsets.ViewSet):
         exchange, analyzer = self.parse_exchange(exchange_code)
 
         if date not in analyzer.calendar.opens:
-            logger.info('%s is closed on %s', self._exchange.code, date)
+            logger.info('%s is closed on %s', exchange.code, date)
             return response.Response({'data': []})
 
         prev_trading_close = analyzer.calendar.previous_close(date)
