@@ -123,23 +123,6 @@ class Stock(models.Model):
             description=exchange.get_stock_name(code)
         )
 
-    def get_ticks(self, from_ts, to_ts) -> pd.DataFrame:
-        tick_keys = ('ts', 'close', 'volume', 'bid_price',
-                     'bid_volume', 'ask_price', 'ask_volume')
-
-        tick_qs = self.ticks.filter(ts__gte=from_ts, ts__lte=to_ts)
-        if tick_qs.exists():
-            return pd.DataFrame.from_records(data=tick_qs.values(*tick_keys))
-
-        df = self.exchange.brokerage.get_ticks(self.code, from_ts)
-        df = df[(df['ts'] >= from_ts) & (df['ts'] <= to_ts)]
-
-        def mapper(tick):
-            return Tick(id=uuid4(), stock=self, **tick)
-        Tick.objects.bulk_create(map(mapper, df.to_dict('records')))
-
-        return df
-
 
 class Tick(models.Model):
     id = models.UUIDField(primary_key=True)

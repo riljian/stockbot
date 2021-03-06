@@ -26,6 +26,20 @@ class Analyzer:
     def get_day_trading_candidates(self, date) -> pd.DataFrame:
         pass
 
+    @staticmethod
+    def ticks_to_kbars(ticks: pd.DataFrame, interval='1Min'):
+        kbars = pd.DataFrame()
+
+        kbars['open'] = ticks['close'].resample(interval).first()
+        kbars['close'] = ticks['close'].resample(interval).last()
+        kbars['high'] = ticks['close'].resample(interval).max()
+        kbars['low'] = ticks['close'].resample(interval).min()
+        kbars['volume'] = ticks['close'].resample(interval).sum()
+
+        kbars.dropna(inplace=True)
+
+        return kbars
+
 
 class TwseAnalyzer(Analyzer):
 
