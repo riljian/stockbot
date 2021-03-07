@@ -139,7 +139,3 @@ class Tick(models.Model):
             models.Index(fields=['-ts']),
             models.Index(fields=['-ts', 'stock']),
         ]
-        constraints = [
-            models.UniqueConstraint(
-                fields=['stock', 'ts', 'close'], name='unique_tick')
-        ]

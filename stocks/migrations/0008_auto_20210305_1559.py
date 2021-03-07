@@ -33,8 +33,4 @@ class Migration(migrations.Migration):
             model_name='tick',
             index=models.Index(fields=['-ts', 'stock'], name='stocks_tick_ts_5cc362_idx'),
         ),
-        migrations.AddConstraint(
-            model_name='tick',
-            constraint=models.UniqueConstraint(fields=('stock', 'ts', 'close'), name='unique_tick'),
-        ),
     ]
