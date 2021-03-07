@@ -1,7 +1,8 @@
+from dateutil.tz import gettz
+
 import pandas as pd
 
 from stocks.helpers import analyzer as analyzers
-from stocks.models import Stock
 
 
 class Operator:
@@ -29,6 +30,11 @@ class TwseOperator(Operator):
 
     def get_day_trade_candidates(self, date) -> pd.DataFrame:
         analyzer = self._analyzer
+
+        pruned_date = pd.to_datetime(date.strftime('%Y/%m/%d'), utc=True)
+        if pruned_date not in analyzer.calendar.opens:
+            return pd.DataFrame()
+
         prev_trading_close = analyzer.calendar.previous_close(date)
 
         df = analyzer.get_stocks()
