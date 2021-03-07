@@ -37,8 +37,12 @@ class Analyzer:
 
     @staticmethod
     def fill_technical_indicator(kbars):
-        series = talib.RSI(kbars['close'], timeperiod=14).rename('rsi')
-        return pd.concat([kbars, series], axis=1)
+        rsi_series = talib.RSI(kbars['close'], timeperiod=14).rename('rsi')
+        macd, macd_signal, macd_hist = talib.MACD(kbars['close'], fastperiod=12, slowperiod=26, signalperiod=9)
+        macd_series = macd.rename('macd')
+        macd_signal_series = macd_signal.rename('macd_signal')
+        macd_hist_series = macd_hist.rename('macd_hist')
+        return pd.concat([kbars, rsi_series, macd_series, macd_signal_series, macd_hist_series], axis=1)
 
     @staticmethod
     def ticks_to_kbars(ticks: pd.DataFrame, interval='1Min'):
@@ -80,7 +84,7 @@ class TwseAnalyzer(Analyzer):
 
         return self.fill_technical_indicator(self.ticks_to_kbars(ticks))[from_ts:to_ts]
 
-    def draw_rsi_plot(self, stock, from_ts, to_ts):
+    def draw_plot(self, stock, from_ts, to_ts):
         kbars = self.get_technical_indicator_filled_kbars(stock, from_ts, to_ts).reset_index()
         kbars = kbars.rename(columns={'ts': 'time'})
 
@@ -93,13 +97,17 @@ class TwseAnalyzer(Analyzer):
         fplt.volume_bull_body_color = fplt.volume_bull_color
         fplt.volume_bear_color = '#92d2cc'
 
-        main_ax, rsi_ax = fplt.create_plot(stock.description, rows=2)
+        main_ax, rsi_ax, macd_ax = fplt.create_plot(stock.description, rows=3)
 
         fplt.candlestick_ochl(kbars[['time', 'open', 'close', 'high', 'low']], ax=main_ax)
         fplt.volume_ocv(kbars[['time', 'open', 'close', 'volume']], ax=main_ax.overlay())
 
         fplt.plot(kbars['time'], kbars['rsi'], ax=rsi_ax, legend='RSI')
         fplt.set_y_range(0, 100, ax=rsi_ax)
+
+        fplt.volume_ocv(kbars[['time', 'open', 'close', 'macd_hist']], ax=macd_ax, colorfunc=fplt.strength_colorfilter)
+        fplt.plot(kbars['time'], kbars['macd'], ax=macd_ax, legend='MACD')
+        fplt.plot(kbars['time'], kbars['macd_signal'], ax=macd_ax, legend='Signal')
 
         fplt.autoviewrestore()
         fplt.show()

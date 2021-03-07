@@ -67,19 +67,26 @@ class TwseDayTradeBackTest(BackTest):
         self._kbars[stock.id] = analyzer.get_technical_indicator_filled_kbars(stock, from_ts, to_ts)
 
     def react(self, stock, tick_row):
-        operator = self._operator
-        timezone = operator.brokerage.TIMEZONE
+        timezone = self._operator.brokerage.TIMEZONE
         ts = tick_row.name
         price = tick_row['close']
-        prev_kbars = self._kbars[stock.id][:ts]
-        rsi = prev_kbars.iloc[len(prev_kbars.index) - 1]['rsi']
+        kbars = self._kbars[stock.id][:ts]
+        min_rsi = kbars.tail(3)['rsi'].min()
+        max_rsi = kbars.tail(3)['rsi'].max()
+        is_in_timing, is_out_timing = False, False
+        if len(kbars.index) > 1:
+            prev_macd = kbars.iloc[-2]['macd_hist']
+            curr_macd = kbars.iloc[-1]['macd_hist']
+            is_in_timing = min_rsi < 30 and (prev_macd < 0 < curr_macd)
+            is_out_timing = (max_rsi > 70 and (curr_macd < 0 < prev_macd)) or \
+                            ts >= pd.to_datetime('2021-03-05T13:30:00').tz_localize(timezone)
         if self._done:
             return
-        elif self._position == 0 and rsi < 20:
+        elif self._position == 0 and is_in_timing:
             volume = tick_row['volume'] * 1000
             self.insert_record(ts=ts, stock=stock, price=price, volume=volume)
             self._position += volume
-        elif self._position > 0 and (ts >= pd.to_datetime('2021-03-05T13:30:00').tz_localize(timezone) or rsi > 80):
+        elif self._position > 0 and is_out_timing:
             volume = -self._position
             self.insert_record(ts=ts, stock=stock, price=price, volume=volume)
             self._position += volume
