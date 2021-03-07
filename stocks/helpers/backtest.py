@@ -63,24 +63,8 @@ class TwseDayTradeBackTest(BackTest):
         return self._operator.brokerage.get_ticks(stock, from_ts, to_ts)
 
     def setup(self, stock, from_ts, to_ts):
-        operator = self._operator
-        timezone = operator.brokerage.TIMEZONE
-        brokerage = operator.brokerage
-        analyzer = operator.analyzer
-        curr_date = pd.to_datetime(from_ts.strftime('%Y/%m/%d'))
-        prev_date = operator.analyzer.calendar.previous_close(curr_date).date()
-
-        def get_ts_duration(date):
-            return [
-                pd.to_datetime(date.strftime('%Y-%m-%dT09:00:00')).tz_localize(timezone),
-                pd.to_datetime(date.strftime('%Y-%m-%dT14:30:00')).tz_localize(timezone),
-            ]
-
-        curr_ticks = brokerage.get_ticks(stock, *get_ts_duration(curr_date))
-        prev_ticks = brokerage.get_ticks(stock, *get_ts_duration(prev_date))
-        ticks = prev_ticks.append(curr_ticks)
-        kbars = analyzer.fill_technical_indicator(analyzer.ticks_to_kbars(ticks))
-        self._kbars[stock.id] = kbars[from_ts:]
+        analyzer = self._operator.analyzer
+        self._kbars[stock.id] = analyzer.get_technical_indicator_filled_kbars(stock, from_ts, to_ts)
 
     def react(self, stock, tick_row):
         operator = self._operator
