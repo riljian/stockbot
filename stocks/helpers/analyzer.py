@@ -1,11 +1,11 @@
 import logging
 from typing import Tuple
-from dateutil.tz import gettz
 
-import talib
-import pandas as pd
-from trading_calendars import get_calendar
 import finplot as fplt
+import pandas as pd
+import talib
+from dateutil.tz import gettz
+from trading_calendars import get_calendar
 
 from stocks.models import DailySummary, Exchange
 
@@ -56,6 +56,12 @@ class Analyzer:
 
         return kbars.dropna()
 
+    def save_plot(self, plot_title, kbars):
+        pass
+
+    def draw_plot(self, plot_title, kbars):
+        pass
+
 
 class TwseAnalyzer(Analyzer):
 
@@ -84,9 +90,8 @@ class TwseAnalyzer(Analyzer):
 
         return self.fill_technical_indicator(self.ticks_to_kbars(ticks))[from_ts:to_ts]
 
-    def draw_plot(self, stock, from_ts, to_ts):
-        kbars = self.get_technical_indicator_filled_kbars(stock, from_ts, to_ts).reset_index()
-        kbars = kbars.rename(columns={'ts': 'time'})
+    def setup_plot(self, plot_title, kbars):
+        kbars = kbars.reset_index().rename(columns={'ts': 'time'})
 
         # adopt TWSE style
         fplt.display_timezone = gettz(self._exchange.brokerage.TIMEZONE)
@@ -97,18 +102,27 @@ class TwseAnalyzer(Analyzer):
         fplt.volume_bull_body_color = fplt.volume_bull_color
         fplt.volume_bear_color = '#92d2cc'
 
-        main_ax, rsi_ax, macd_ax = fplt.create_plot(stock.description, rows=3)
+        main_ax, rsi_ax, macd_ax = fplt.create_plot(plot_title, rows=3)
 
         fplt.candlestick_ochl(kbars[['time', 'open', 'close', 'high', 'low']], ax=main_ax)
         fplt.volume_ocv(kbars[['time', 'open', 'close', 'volume']], ax=main_ax.overlay())
 
         fplt.plot(kbars['time'], kbars['rsi'], ax=rsi_ax, legend='RSI')
         fplt.set_y_range(0, 100, ax=rsi_ax)
+        fplt.add_band(30, 70, ax=rsi_ax)
 
         fplt.volume_ocv(kbars[['time', 'open', 'close', 'macd_hist']], ax=macd_ax, colorfunc=fplt.strength_colorfilter)
         fplt.plot(kbars['time'], kbars['macd'], ax=macd_ax, legend='MACD')
         fplt.plot(kbars['time'], kbars['macd_signal'], ax=macd_ax, legend='Signal')
 
+    def save_plot(self, plot_title, kbars):
+        self.setup_plot(plot_title, kbars)
+        with open(f'{plot_title}.png', 'wb') as f:
+            fplt.timer_callback(lambda: fplt.screenshot(f), 1, single_shot=True)
+            fplt.show()
+
+    def draw_plot(self, plot_title, kbars):
+        self.setup_plot(plot_title, kbars)
         fplt.autoviewrestore()
         fplt.show()
 
