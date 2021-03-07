@@ -1,7 +1,7 @@
 from uuid import uuid4
 
-import shioaji as sj
 import pandas as pd
+import shioaji as sj
 
 
 class Brokerage:
@@ -50,15 +50,19 @@ class TwseBrokerage(Brokerage):
             df = pd.DataFrame.from_records(data=tick_qs.values(*tick_keys).order_by('ts'))
             df['ts'] = df['ts'].dt.tz_convert(self.TIMEZONE)
         else:
-            Tick = stock.ticks.model  # pylint: disable=invalid-name
-
-            def mapper(tick):
-                return Tick(id=uuid4(), stock=stock, **tick)
+            tick_cls = stock.ticks.model
             tick_raw = self._adapter.ticks(self.get_stock_meta(stock.code),
                                            from_ts.strftime('%Y-%m-%d'))
             df = pd.DataFrame({**tick_raw})
             df['ts'] = pd.to_datetime(df['ts']).dt.tz_localize(self.TIMEZONE)
             df = df[(df['ts'] >= from_ts) & (df['ts'] <= to_ts)]
-            Tick.objects.bulk_create(map(mapper, df.to_dict('records')))
+
+            def mapper(tick):
+                return tick_cls(id=uuid4(), stock=stock, **tick)
+
+            ticks = list(map(mapper, df.to_dict('records')))
+            chunk_size = 20000  # MySQL insertion failed: MySQL server has gone away
+            for i in range(0, len(ticks), chunk_size):
+                tick_cls.objects.bulk_create(ticks[i:i + chunk_size])
 
         return df.set_index('ts')
