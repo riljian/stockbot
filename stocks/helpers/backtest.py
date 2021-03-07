@@ -68,6 +68,7 @@ class TwseDayTradeBackTest(BackTest):
 
     def react(self, stock, tick_row):
         timezone = self._operator.brokerage.TIMEZONE
+        analyzer = self._operator.analyzer
         ts = tick_row.name
         price = tick_row['close']
         kbars = self._kbars[stock.id][:ts]
@@ -77,8 +78,8 @@ class TwseDayTradeBackTest(BackTest):
         if len(kbars.index) > 1:
             prev_macd = kbars.iloc[-2]['macd_hist']
             curr_macd = kbars.iloc[-1]['macd_hist']
-            is_in_timing = min_rsi < 30 and (prev_macd < 0 < curr_macd)
-            is_out_timing = (max_rsi > 70 and (curr_macd < 0 < prev_macd)) or \
+            is_in_timing = min_rsi < analyzer.MIN_RSI and (prev_macd < 0 < curr_macd)
+            is_out_timing = (max_rsi > analyzer.MAX_RSI and (curr_macd < 0 < prev_macd)) or \
                             ts >= pd.to_datetime('2021-03-05T13:30:00').tz_localize(timezone)
         if self._done:
             return

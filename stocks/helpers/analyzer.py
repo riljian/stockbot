@@ -64,6 +64,8 @@ class Analyzer:
 
 
 class TwseAnalyzer(Analyzer):
+    MIN_RSI = 30
+    MAX_RSI = 70
 
     def __init__(self):
         super().__init__(Exchange.objects.get(code='TWSE'))
@@ -109,7 +111,7 @@ class TwseAnalyzer(Analyzer):
 
         fplt.plot(kbars['time'], kbars['rsi'], ax=rsi_ax, legend='RSI')
         fplt.set_y_range(0, 100, ax=rsi_ax)
-        fplt.add_band(30, 70, ax=rsi_ax)
+        fplt.add_band(self.MIN_RSI, self.MAX_RSI, ax=rsi_ax)
 
         fplt.volume_ocv(kbars[['time', 'open', 'close', 'macd_hist']], ax=macd_ax, colorfunc=fplt.strength_colorfilter)
         fplt.plot(kbars['time'], kbars['macd'], ax=macd_ax, legend='MACD')
