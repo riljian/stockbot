@@ -5,6 +5,7 @@ import pandas as pd
 
 
 class Brokerage:
+    TIMEZONE = None
     _adapter = None
 
     def __init__(self):
