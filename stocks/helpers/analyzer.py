@@ -1,5 +1,6 @@
 import logging
 
+import talib
 import pandas as pd
 from trading_calendars import get_calendar
 
@@ -29,6 +30,11 @@ class Analyzer:
         pass
 
     @staticmethod
+    def fill_technical_indicator(kbars):
+        series = talib.RSI(kbars['close'], timeperiod=14).rename('rsi')
+        return pd.concat([kbars, series], axis=1)
+
+    @staticmethod
     def ticks_to_kbars(ticks: pd.DataFrame, interval='1Min'):
         kbars = pd.DataFrame()
 
@@ -36,11 +42,9 @@ class Analyzer:
         kbars['close'] = ticks['close'].resample(interval).last()
         kbars['high'] = ticks['close'].resample(interval).max()
         kbars['low'] = ticks['close'].resample(interval).min()
-        kbars['volume'] = ticks['close'].resample(interval).sum()
+        kbars['volume'] = ticks['volume'].resample(interval).sum()
 
-        kbars.dropna(inplace=True)
-
-        return kbars
+        return kbars.dropna()
 
 
 class TwseAnalyzer(Analyzer):

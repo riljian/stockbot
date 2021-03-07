@@ -60,6 +60,4 @@ class TwseBrokerage(Brokerage):
             df = df[(df['ts'] >= from_ts) & (df['ts'] <= to_ts)]
             Tick.objects.bulk_create(map(mapper, df.to_dict('records')))
 
-        df.set_index('ts', inplace=True)
-
-        return df
+        return df.set_index('ts')
