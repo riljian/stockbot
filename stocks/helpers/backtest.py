@@ -1,9 +1,12 @@
+import logging
 from uuid import uuid4
 
 import pandas as pd
 
 from stocks.helpers import operator as operators
 from stocks.models import BackTestRecord, Stock
+
+logger = logging.getLogger(__name__)
 
 
 class BackTest:
@@ -19,13 +22,17 @@ class BackTest:
         stock = kwargs['stock']
         ts = kwargs['ts']
         price = kwargs['price']
-        action = 'buy' if volume > 0 else 'sell'
-        print(f'[{ts}] {action} {abs(volume)} {stock.description} at {price}')
+        action = 'Buy' if volume > 0 else 'Sell'
+        logger.info(f'[{ts}] {action} {int(abs(volume))} {stock.code} at {price}')
         BackTestRecord.objects.create(id=uuid4(), no=self.__no, **kwargs)
         self.__records.append({**kwargs, 'stock': stock.id}, ignore_index=True)
 
     def start(self, from_ts, to_ts):
         stocks = self.pick_stocks(from_ts)
+        if stocks.empty:
+            logger.info('No stock picked')
+        else:
+            logger.info('Stock {} picked'.format(stocks['code'].to_list()))
 
         for _, stock_row in stocks.iterrows():
             stock = Stock.objects.get(id=stock_row['id'])
@@ -54,7 +61,13 @@ class TwseDayTradeBackTest(BackTest):
         self._kbars = {}
         self._operator = operators.TwseOperator()
         self._position = 0
-        self._done = False
+
+    def start(self, from_date, to_date):
+        for date in pd.date_range(from_date, to_date, freq='D'):
+            logger.info('{} day trade back test'.format(date.strftime('%Y/%m/%d')))
+            from_ts = date.replace(hour=9, minute=00, second=0, microsecond=0)
+            to_ts = date.replace(hour=14, minute=30, second=0, microsecond=0)
+            super().start(from_ts, to_ts)
 
     def pick_stocks(self, from_ts) -> pd.DataFrame:
         return self._operator.get_day_trade_candidates(from_ts)
@@ -65,30 +78,30 @@ class TwseDayTradeBackTest(BackTest):
     def setup(self, stock, from_ts, to_ts):
         analyzer = self._operator.analyzer
         self._kbars[stock.id] = analyzer.get_technical_indicator_filled_kbars(stock, from_ts, to_ts)
+        logger.info(f'Stock {stock.code} initialized')
 
     def react(self, stock, tick_row):
-        timezone = self._operator.brokerage.TIMEZONE
         analyzer = self._operator.analyzer
         ts = tick_row.name
         price = tick_row['close']
         kbars = self._kbars[stock.id][:ts]
         min_rsi = kbars.tail(3)['rsi'].min()
         max_rsi = kbars.tail(3)['rsi'].max()
+        # final_in_ts = ts.replace(hour=11, minute=30, second=0, microsecond=0)
+        final_out_ts = ts.replace(hour=13, minute=00, second=0, microsecond=0)
         is_in_timing, is_out_timing = False, False
+
         if len(kbars.index) > 1:
             prev_macd = kbars.iloc[-2]['macd_hist']
             curr_macd = kbars.iloc[-1]['macd_hist']
             is_in_timing = min_rsi < analyzer.MIN_RSI and (prev_macd < 0 < curr_macd)
-            is_out_timing = (max_rsi > analyzer.MAX_RSI and (curr_macd < 0 < prev_macd)) or \
-                            ts >= pd.to_datetime('2021-03-05T13:30:00').tz_localize(timezone)
-        if self._done:
-            return
-        elif self._position == 0 and is_in_timing:
+            is_out_timing = max_rsi > analyzer.MAX_RSI and (curr_macd < 0 < prev_macd)
+
+        if is_in_timing and ts < final_out_ts and self._position == 0:
             volume = tick_row['volume'] * 1000
             self.insert_record(ts=ts, stock=stock, price=price, volume=volume)
             self._position += volume
-        elif self._position > 0 and is_out_timing:
+        elif self._position > 0 and (is_out_timing or ts >= final_out_ts):
             volume = -self._position
             self.insert_record(ts=ts, stock=stock, price=price, volume=volume)
             self._position += volume
-            self._done = True
