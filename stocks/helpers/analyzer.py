@@ -1,7 +1,6 @@
 import logging
 from typing import Tuple
 
-import finplot as fplt
 import pandas as pd
 import talib
 from dateutil.tz import gettz
@@ -93,6 +92,8 @@ class TwseAnalyzer(Analyzer):
         return self.fill_technical_indicator(self.ticks_to_kbars(ticks))[from_ts:to_ts]
 
     def setup_plot(self, plot_title, kbars):
+        import finplot as fplt
+
         kbars = kbars.reset_index().rename(columns={'ts': 'time'})
 
         # adopt TWSE style
@@ -118,12 +119,16 @@ class TwseAnalyzer(Analyzer):
         fplt.plot(kbars['time'], kbars['macd_signal'], ax=macd_ax, legend='Signal')
 
     def save_plot(self, plot_title, kbars):
+        import finplot as fplt
+
         self.setup_plot(plot_title, kbars)
         with open(f'{plot_title}.png', 'wb') as f:
             fplt.timer_callback(lambda: fplt.screenshot(f), 1, single_shot=True)
             fplt.show()
 
     def draw_plot(self, plot_title, kbars):
+        import finplot as fplt
+
         self.setup_plot(plot_title, kbars)
         fplt.autoviewrestore()
         fplt.show()
