@@ -101,13 +101,11 @@ class Command(BaseCommand):
 
         try:
             daily_exchange_summary_df = self.__exchange.get_daily_summary(date)
-            daily_exchange_summary = \
-                self.trans_summary_df_to_dict(daily_exchange_summary_df)
+            daily_exchange_summary = self.trans_summary_df_to_dict(daily_exchange_summary_df)
             stock_codes = daily_exchange_summary.keys()
             self.fill_missing_stock(stock_codes)
             stock_map = self.get_stock_map(self.__exchange, stock_codes)
-            summary_existing_codes = \
-                self.get_summary_existing_codes(self.__exchange, date)
+            summary_existing_codes = self.get_summary_existing_codes(self.__exchange, date)
 
             summaries = []
             for code in set(stock_codes) - summary_existing_codes:
