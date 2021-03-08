@@ -87,10 +87,16 @@ class TwseCrawler(ExchangeCrawler):
             return -2, 1
         return -1, 2
 
-    @classmethod
-    def process_daily_summary_response(cls, response, date) -> pd.DataFrame:
-        daily_quotes_table_index, target_columns_level = \
-            cls.get_parsing_offset(date)
+    def get_daily_transaction_summary(self, date: datetime.datetime) -> pd.DataFrame:
+        path = '/en/exchangeReport/MI_INDEX'
+        url = f'{self.ORIGIN}{path}'
+        params = {
+            'response': 'html',
+            'date': date.strftime('%Y%m%d'),
+            'type': 'ALLBUT0999',
+        }
+        response = self.request(url=url, method='get', params=params)
+        daily_quotes_table_index, target_columns_level = self.get_parsing_offset(date)
         rename_mapper = {
             'Security Code': 'code',
             'Trade Volume': 'trade_volume',
@@ -113,16 +119,36 @@ class TwseCrawler(ExchangeCrawler):
         df.set_index(['code'], inplace=True)
         return df.apply(pd.to_numeric, errors='coerce')
 
-    def get_daily_summary(self, date: datetime.datetime) -> pd.DataFrame:
-        path = '/en/exchangeReport/MI_INDEX'
+    def get_daily_investor_summary(self, date: datetime.datetime) -> pd.DataFrame:
+        path = '/en/fund/T86'
         url = f'{self.ORIGIN}{path}'
         params = {
-            'response': 'html',
+            'response': 'json',
             'date': date.strftime('%Y%m%d'),
-            'type': 'ALLBUT0999',
+            'selectType': 'ALLBUT0999',
         }
-        response = self.request(url=url, method='get', params=params)
-        return self.process_daily_summary_response(response, date)
+        rename_mapper = {
+            0: 'code',
+            1: 'foreign_dealer_buy_volume',
+            2: 'foreign_dealer_sell_volume',
+            7: 'investment_trust_buy_volume',
+            8: 'investment_trust_sell_volume',
+            11: 'local_dealer_proprietary_buy_volume',
+            12: 'local_dealer_proprietary_sell_volume',
+            14: 'local_dealer_hedge_buy_volume',
+            15: 'local_dealer_hedge_sell_volume',
+        }
+        data = self.request(url=url, method='get', params=params).json()
+        df = pd.DataFrame(data['data'], columns=list(range(len(data['fields']))))
+        df = df[list(rename_mapper.keys())]
+        df.rename(columns=rename_mapper, inplace=True)
+        df.set_index(['code'], inplace=True)
+        return df.replace(',', '', regex=True).apply(pd.to_numeric, errors='coerce')
+
+    def get_daily_summary(self, date: datetime.datetime) -> pd.DataFrame:
+        transaction_summary = self.get_daily_transaction_summary(date)
+        investor_summary = self.get_daily_investor_summary(date)
+        return pd.merge(transaction_summary, investor_summary, left_index=True, right_index=True)
 
     def load_stock_candidates_by_partial_code(self, partial_code) -> dict:
         path = '/zh/api/codeQuery'

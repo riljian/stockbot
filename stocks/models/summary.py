@@ -19,6 +19,14 @@ class DailySummary(models.Model):
     last_best_bid_volume = models.IntegerField(null=True)  # 最後揭示買量
     last_best_ask_price = models.FloatField(null=True)  # 最後揭示賣價
     last_best_ask_volume = models.IntegerField(null=True)  # 最後揭示賣量
+    foreign_dealer_buy_volume = models.IntegerField(null=True)  # 外資買入
+    foreign_dealer_sell_volume = models.IntegerField(null=True)  # 外資賣出
+    investment_trust_buy_volume = models.IntegerField(null=True)  # 投信買入
+    investment_trust_sell_volume = models.IntegerField(null=True)  # 投信賣出
+    local_dealer_proprietary_buy_volume = models.IntegerField(null=True)  # 自營商(自有)買入
+    local_dealer_proprietary_sell_volume = models.IntegerField(null=True)  # 自營商(自有)賣出
+    local_dealer_hedge_buy_volume = models.IntegerField(null=True)  # 自營商(避險)買入
+    local_dealer_hedge_sell_volume = models.IntegerField(null=True)  # 自營商(避險)賣出
 
     class Meta:
         indexes = [
