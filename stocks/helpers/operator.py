@@ -1,5 +1,3 @@
-from dateutil.tz import gettz
-
 import pandas as pd
 
 from stocks.helpers import analyzer as analyzers
