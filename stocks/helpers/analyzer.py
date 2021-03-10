@@ -200,3 +200,20 @@ class TwseAnalyzer(Analyzer):
         change_rate_filter = change_rate_series > min_change_rate
 
         return change_rate_filter, change_rate_series
+
+    def get_investor_continuous_buy_filter(self, df: pd.DataFrame, date,
+                                           investors, trading_days=3) -> Tuple[pd.Series, pd.Series]:
+        last_n_days = self.calendar.opens[:date].tail(trading_days)
+        data = DailySummary.objects.filter(date__in=last_n_days).values().order_by('stock', 'date')
+        snapshot = pd.DataFrame.from_records(data=data)
+
+        total_volume_key = 'investor_total_volume'
+        for idx, investor in enumerate(investors):
+            diff = snapshot[f'{investor}_buy_volume'] - snapshot[f'{investor}_sell_volume']
+            snapshot[total_volume_key] = diff if idx == 0 else snapshot[total_volume_key] + diff
+        snapshot['is_buy'] = snapshot[total_volume_key] > 0
+        aggregate_map = {total_volume_key: 'sum', 'is_buy': 'all'}
+        summary = snapshot[['stock_id', total_volume_key, 'is_buy']].groupby(snapshot['stock_id']).agg(aggregate_map)
+        ordered_summary = df.join(summary, on='id')
+
+        return ordered_summary['is_buy'], ordered_summary[total_volume_key]
