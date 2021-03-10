@@ -43,6 +43,8 @@ class TwseOperator(Operator):
             analyzer.get_price_filter(df, prev_trading_close, min_price=5.0, max_price=30.0)
         price_change_rate_filter, price_change_rate_result = \
             analyzer.get_price_change_rate_filter(df, prev_trading_close, min_change_rate=0.04, days=1)
+        continuous_buy_filter, continuous_buy_result = \
+            analyzer.get_investor_continuous_buy_filter(df, prev_trading_close, trading_days=1)
 
-        result = pd.concat([df, volume_result, price_result, price_change_rate_result], axis=1)
-        return result[volume_filter & price_filter & price_change_rate_filter]
+        result = pd.concat([df, volume_result, price_result, price_change_rate_result, continuous_buy_result], axis=1)
+        return result[volume_filter & price_filter & price_change_rate_filter & continuous_buy_filter]
