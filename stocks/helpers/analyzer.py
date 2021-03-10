@@ -158,7 +158,7 @@ class TwseAnalyzer(Analyzer):
     def get_price_change_rate_filter(self, df: pd.DataFrame, date,
                                      min_change_rate=0.0, days=1) -> Tuple[pd.Series, pd.Series]:
         # noinspection PyArgumentList
-        base_date = self._calendar.previous_close(date - pd.DateOffset(days=days - 1))
+        base_date = self.calendar.previous_close(date - pd.DateOffset(days=days - 1))
 
         def get_summary_qs(d):
             return DailySummary.objects.filter(date=d).values('stock_id', 'closing_price')
@@ -182,7 +182,7 @@ class TwseAnalyzer(Analyzer):
     def get_volume_change_rate_filter(self, df: pd.DataFrame, date,
                                       min_change_rate=0.0, days=1) -> Tuple[pd.Series, pd.Series]:
         # noinspection PyArgumentList
-        base_date = self._calendar.previous_close(date - pd.DateOffset(days=days - 1))
+        base_date = self.calendar.previous_close(date - pd.DateOffset(days=days - 1))
 
         def get_summary_qs(d):
             return DailySummary.objects.filter(date=d).values('stock_id', 'trade_volume')
