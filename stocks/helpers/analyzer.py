@@ -41,7 +41,7 @@ class Analyzer:
         macd_series = macd.rename('macd')
         macd_signal_series = macd_signal.rename('macd_signal')
         macd_hist_series = macd_hist.rename('macd_hist')
-        return pd.concat([kbars, rsi_series, macd_series, macd_signal_series, macd_hist_series], axis=1)
+        return pd.concat([kbars, rsi_series, macd_series, macd_signal_series, macd_hist_series], axis='columns')
 
     @staticmethod
     def ticks_to_kbars(ticks: pd.DataFrame, interval='1Min'):

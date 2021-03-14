@@ -46,5 +46,6 @@ class TwseOperator(Operator):
         continuous_buy_filter, continuous_buy_result = \
             analyzer.get_investor_continuous_buy_filter(df, prev_trading_close, trading_days=1)
 
-        result = pd.concat([df, volume_result, price_result, price_change_rate_result, continuous_buy_result], axis=1)
+        result = pd.concat([df, volume_result, price_result, price_change_rate_result, continuous_buy_result],
+                           axis='columns')
         return result[volume_filter & price_filter & price_change_rate_filter & continuous_buy_filter]
