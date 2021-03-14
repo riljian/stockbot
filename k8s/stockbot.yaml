@@ -23,11 +23,11 @@ spec:
               name: api
           resources:
             limits:
-              cpu: '500m'
-              memory: '1024Mi'
+              cpu: '1000m'
+              memory: '512Mi'
             requests:
-              cpu: '10m'
-              memory: '256Mi'
+              cpu: '100m'
+              memory: '128Mi'
           env:
             - name: DB_HOST
               value: mysql

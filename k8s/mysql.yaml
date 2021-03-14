@@ -24,11 +24,11 @@ spec:
               name: mysql
           resources:
             limits:
-              cpu: '1500m'
-              memory: '2048Mi'
+              cpu: '1000m'
+              memory: '2560Mi'
             requests:
-              cpu: '10m'
-              memory: '1536Mi'
+              cpu: '150m'
+              memory: '1920Mi'
           env:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
