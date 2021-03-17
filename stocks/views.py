@@ -25,6 +25,15 @@ class StockViewSet(viewsets.ViewSet):
         return operator_cls()
 
     @decorators.action(detail=False, methods=['get'])
+    def conservative_candidates(self, request):
+        exchange_code = request.query_params.get('exchange')
+        date = pd.to_datetime(request.query_params.get('date'), utc=True)
+        operator = self.parse_operator(exchange_code)
+
+        candidates = operator.get_conservative_candidates(date)
+        return response.Response({'data': candidates.mask(candidates.isnull(), None).to_dict('records')})
+
+    @decorators.action(detail=False, methods=['get'])
     def day_trading_candidates(self, request):
         exchange_code = request.query_params.get('exchange')
         date = pd.to_datetime(request.query_params.get('date'), utc=True)

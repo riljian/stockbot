@@ -155,6 +155,22 @@ class TwseAnalyzer(Analyzer):
 
         return summary['trade_volume'] >= min_volume, summary['trade_volume']
 
+    @staticmethod
+    def get_amplitude_filter(df: pd.DataFrame, from_ts, to_ts, min_amplitude=0.0) -> Tuple[pd.Series, pd.Series]:
+        raw = (DailySummary.objects
+               .filter(date__gte=from_ts, date__lte=to_ts)
+               .values('stock')
+               .annotate(lowest_price=models.Min('lowest_price'),
+                         highest_price=models.Max('highest_price')))
+        summary = pd.DataFrame.from_records(data=raw)
+        lowest_price_series = summary['lowest_price']
+        highest_price_series = summary['highest_price']
+        summary['amplitude'] = \
+            (highest_price_series - lowest_price_series) / (highest_price_series + lowest_price_series)
+        ordered_summary = df.join(summary.set_index('stock'), on='id')
+
+        return ordered_summary['amplitude'] >= min_amplitude, ordered_summary['amplitude']
+
     def get_price_change_rate_filter(self, df: pd.DataFrame, date,
                                      min_change_rate=0.0, trading_days=1) -> Tuple[pd.Series, pd.Series]:
         # noinspection PyArgumentList

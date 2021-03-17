@@ -17,6 +17,9 @@ class Operator:
     def brokerage(self):
         return self.exchange.brokerage
 
+    def get_conservative_candidates(self, date) -> pd.DataFrame:
+        pass
+
     def get_day_trade_candidates(self, date) -> pd.DataFrame:
         pass
 
@@ -25,6 +28,27 @@ class TwseOperator(Operator):
 
     def __init__(self):
         self._analyzer = analyzers.TwseAnalyzer()
+
+    def get_conservative_candidates(self, date) -> pd.DataFrame:
+        analyzer = self._analyzer
+
+        df = analyzer.get_stocks()
+
+        num_years = 5
+        past_years = pd.date_range(end=date, periods=num_years, freq='Y')
+        for idx, year_end in enumerate(past_years):
+            year_start = year_end.replace(month=1, day=1)
+            amplitude_filter, amplitude = analyzer.get_amplitude_filter(df, from_ts=year_start, to_ts=year_end,
+                                                                        min_amplitude=0.20)
+            if idx > 0:
+                acc_filter = acc_filter & amplitude_filter
+                acc_amplitude = acc_amplitude + amplitude
+            else:
+                acc_filter = amplitude_filter
+                acc_amplitude = amplitude
+        acc_amplitude = acc_amplitude / num_years
+        result = pd.concat([df, acc_amplitude], axis='columns')
+        return result[acc_filter]
 
     def get_day_trade_candidates(self, date) -> pd.DataFrame:
         analyzer = self._analyzer
