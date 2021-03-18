@@ -5,6 +5,7 @@ import pandas as pd
 import talib
 from dateutil.tz import gettz
 from trading_calendars import get_calendar
+from django.db import models
 
 from stocks.models import DailySummary, Exchange
 
