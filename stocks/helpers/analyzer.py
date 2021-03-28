@@ -2,6 +2,7 @@ import logging
 from typing import Tuple
 
 import pandas as pd
+from pandas.tseries.frequencies import to_offset
 import talib
 from dateutil.tz import gettz
 from trading_calendars import get_calendar
@@ -36,13 +37,8 @@ class Analyzer:
         pass
 
     @staticmethod
-    def fill_technical_indicator(kbars):
-        rsi_series = talib.RSI(kbars['close'], timeperiod=14).rename('rsi')
-        macd, macd_signal, macd_hist = talib.MACD(kbars['close'], fastperiod=12, slowperiod=26, signalperiod=9)
-        macd_series = macd.rename('macd')
-        macd_signal_series = macd_signal.rename('macd_signal')
-        macd_hist_series = macd_hist.rename('macd_hist')
-        return pd.concat([kbars, rsi_series, macd_series, macd_signal_series, macd_hist_series], axis='columns')
+    def get_is_interval_over_a_day(interval):
+        return to_offset(interval) >= to_offset('1D')
 
     @staticmethod
     def ticks_to_kbars(ticks: pd.DataFrame, interval='1Min'):
@@ -53,6 +49,21 @@ class Analyzer:
         kbars['high'] = ticks['close'].resample(interval).max()
         kbars['low'] = ticks['close'].resample(interval).min()
         kbars['volume'] = ticks['volume'].resample(interval).sum()
+
+        return kbars.dropna()
+
+    def daily_summaries_to_kbars(self, daily_summaries, interval='1D'):
+        timezone = self.exchange.brokerage.TIMEZONE
+        kbars = pd.DataFrame()
+        summaries = pd.DataFrame.from_records(data=daily_summaries)
+        summaries['ts'] = pd.to_datetime(summaries['date']).dt.tz_localize(timezone)
+        summaries = summaries.set_index(['ts'])
+
+        kbars['open'] = summaries['opening_price'].resample(interval).first()
+        kbars['close'] = summaries['closing_price'].resample(interval).last()
+        kbars['high'] = summaries['highest_price'].resample(interval).max()
+        kbars['low'] = summaries['lowest_price'].resample(interval).min()
+        kbars['volume'] = summaries['trade_volume'].resample(interval).sum()
 
         return kbars.dropna()
 
@@ -81,16 +92,39 @@ class TwseAnalyzer(Analyzer):
             pd.to_datetime(date.strftime('%Y-%m-%dT14:30:00')).tz_localize(timezone),
         ]
 
-    def get_technical_indicator_filled_kbars(self, stock, from_ts, to_ts):
+    def get_kbars(self, stock, from_ts, to_ts, interval='1Min'):
         brokerage = self.exchange.brokerage
 
-        prev_date = self.calendar.previous_close(from_ts).date()
-        ticks = brokerage.get_ticks(stock, *self.get_date_open_duration(prev_date))
+        ticks = pd.DataFrame()
+        if self.get_is_interval_over_a_day(interval):
+            daily_summaries = (stock.daily_summaries
+                               .filter(date__gte=from_ts, date__lte=to_ts)
+                               .values('date', 'trade_volume', 'opening_price', 'closing_price',
+                                       'highest_price', 'lowest_price'))
+            return self.daily_summaries_to_kbars(daily_summaries, interval=interval)
+        else:
+            for date in pd.date_range(from_ts, to_ts, freq='D'):
+                ticks = ticks.append(brokerage.get_ticks(stock, *self.get_date_open_duration(date)))
+            return self.ticks_to_kbars(ticks, interval=interval)
 
-        for date in pd.date_range(from_ts, to_ts, freq='D'):
-            ticks = ticks.append(brokerage.get_ticks(stock, *self.get_date_open_duration(date)))
+    def get_technical_indicator_filled_kbars(self, stock, from_ts, to_ts, interval='1Min'):
+        calendar = self.calendar
+        date_only_from_ts = from_ts.replace(hour=0, minute=0, second=0, microsecond=0)
+        if self.get_is_interval_over_a_day(interval):
+            kbar_from_ts = calendar.opens[:date_only_from_ts][-33]
+        else:
+            kbar_from_ts = calendar.opens[:date_only_from_ts][-1]
+        kbars = self.get_kbars(stock, kbar_from_ts, to_ts, interval=interval)
 
-        return self.fill_technical_indicator(self.ticks_to_kbars(ticks))[from_ts:to_ts]
+        rsi_series = talib.RSI(kbars['close'], timeperiod=14).rename('rsi')
+        macd, macd_signal, macd_hist = talib.MACD(kbars['close'], fastperiod=12, slowperiod=26, signalperiod=9)
+        macd_series = macd.rename('macd')
+        macd_signal_series = macd_signal.rename('macd_signal')
+        macd_hist_series = macd_hist.rename('macd_hist')
+
+        total_series = [kbars, rsi_series, macd_series, macd_signal_series, macd_hist_series]
+
+        return pd.concat(total_series, axis='columns')[from_ts:to_ts].dropna()
 
     def setup_plot(self, plot_title, kbars):
         import finplot as fplt
@@ -119,18 +153,16 @@ class TwseAnalyzer(Analyzer):
         fplt.plot(kbars['time'], kbars['macd'], ax=macd_ax, legend='MACD')
         fplt.plot(kbars['time'], kbars['macd_signal'], ax=macd_ax, legend='Signal')
 
-    def save_plot(self, plot_title, kbars):
-        import finplot as fplt
+        return fplt
 
-        self.setup_plot(plot_title, kbars)
+    def save_plot(self, plot_title, kbars):
+        fplt = self.setup_plot(plot_title, kbars)
         with open(f'{plot_title}.png', 'wb') as f:
             fplt.timer_callback(lambda: fplt.screenshot(f), 1, single_shot=True)
             fplt.show()
 
     def draw_plot(self, plot_title, kbars):
-        import finplot as fplt
-
-        self.setup_plot(plot_title, kbars)
+        fplt = self.setup_plot(plot_title, kbars)
         fplt.autoviewrestore()
         fplt.show()
 

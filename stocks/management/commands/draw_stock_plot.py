@@ -14,6 +14,7 @@ class Command(BaseCommand):
     STOCK_KEY = 'stock'
     FROM_KEY = 'from'
     TO_KEY = 'to'
+    INTERVAL_KEY = 'interval'
 
     help = 'Draw stock plot'
 
@@ -33,14 +34,16 @@ class Command(BaseCommand):
                             required=True, choices=stock_choices)
         parser.add_argument(f'--{self.FROM_KEY}', required=True)
         parser.add_argument(f'--{self.TO_KEY}', required=True)
+        parser.add_argument(f'--{self.INTERVAL_KEY}', required=True)
 
     def handle(self, *args, **options):
         exchange_code = options[self.EXCHANGE_KEY]
         stock_code = options[self.STOCK_KEY]
+        interval = options[self.INTERVAL_KEY]
         from_ts = pd.to_datetime(options.get(self.FROM_KEY))
         to_ts = pd.to_datetime(options.get(self.TO_KEY))
 
         stock = Stock.objects.get(code=stock_code, exchange__code=exchange_code)
         analyzer = analyzers.TwseAnalyzer()
-        kbars = analyzer.get_technical_indicator_filled_kbars(stock, from_ts, to_ts)
+        kbars = analyzer.get_technical_indicator_filled_kbars(stock, from_ts, to_ts, interval=interval)
         analyzer.draw_plot(stock.description, kbars)
