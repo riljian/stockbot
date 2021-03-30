@@ -1,5 +1,6 @@
 import logging
 from uuid import uuid4
+import subprocess
 
 import pandas as pd
 
@@ -12,7 +13,8 @@ logger = logging.getLogger(__name__)
 class BackTest:
 
     def __init__(self):
-        self.__no = uuid4()
+        run_git_rev_parse = subprocess.run(['git', 'rev-parse', 'HEAD'], check=True, capture_output=True)
+        self.__commit = run_git_rev_parse.stdout.decode('utf-8').strip()
         self.__records = \
             pd.DataFrame(columns=['ts', 'stock', 'price', 'volume']).set_index(
                 ['ts', 'stock'])
@@ -24,7 +26,7 @@ class BackTest:
         price = kwargs['price']
         action = 'Buy' if volume > 0 else 'Sell'
         logger.info(f'[{ts}] {action} {int(abs(volume))} {stock.code} at {price}')
-        BackTestRecord.objects.create(id=uuid4(), no=self.__no, **kwargs)
+        BackTestRecord.objects.create(id=uuid4(), commit=self.__commit, **kwargs)
         self.__records.append({**kwargs, 'stock': stock.id}, ignore_index=True)
 
     def start(self, from_ts, to_ts):

@@ -37,7 +37,7 @@ class DailySummary(models.Model):
 
 class BackTestRecord(models.Model):
     id = models.UUIDField(primary_key=True)
-    no = models.UUIDField()
+    commit = models.CharField(max_length=255)
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE)
     price = models.FloatField()
     volume = models.IntegerField()
@@ -45,6 +45,6 @@ class BackTestRecord(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['no']),
-            models.Index(fields=['no', 'stock']),
+            models.Index(fields=['commit']),
+            models.Index(fields=['commit', 'stock']),
         ]
