@@ -59,7 +59,7 @@ class TwseDayTradeBackTest(BackTest):
     def __init__(self):
         super().__init__()
         self._kbars = {}
-        self._operator = operators.TwseOperator()
+        self._operator = operators.DayTradeTwseOperator()
         self._position = 0
 
     def start(self, from_date, to_date):
@@ -70,7 +70,7 @@ class TwseDayTradeBackTest(BackTest):
             super().start(from_ts, to_ts)
 
     def pick_stocks(self, from_ts) -> pd.DataFrame:
-        return self._operator.get_day_trade_candidates(from_ts)
+        return self._operator.get_candidates(from_ts)
 
     def load_ticks(self, stock, from_ts, to_ts) -> pd.DataFrame:
         return self._operator.brokerage.get_ticks(stock, from_ts, to_ts)

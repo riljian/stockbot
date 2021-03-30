@@ -5,6 +5,9 @@ from stocks.helpers import analyzer as analyzers
 
 class Operator:
 
+    def __init__(self):
+        self._analyzer = None
+
     @property
     def analyzer(self):
         return self._analyzer
@@ -17,25 +20,39 @@ class Operator:
     def brokerage(self):
         return self.exchange.brokerage
 
-    def get_conservative_candidates(self, date) -> pd.DataFrame:
+    def get_candidates(self, date):
         pass
 
-    def get_day_trade_candidates(self, date) -> pd.DataFrame:
+    def handle_tick(self, tick):
+        pass
+
+    def place_order(self, stock, amount, price):
+        pass
+
+    def cancel_order(self, order_id):
+        pass
+
+    def update_order(self, order_id, amount=None, price=None):
         pass
 
 
 class TwseOperator(Operator):
 
     def __init__(self):
+        super(TwseOperator, self).__init__()
         self._analyzer = analyzers.TwseAnalyzer()
 
-    def get_conservative_candidates(self, date) -> pd.DataFrame:
+
+class ConservativeTwseOperator(TwseOperator):
+
+    def get_candidates(self, date) -> pd.DataFrame:
         analyzer = self._analyzer
 
         df = analyzer.get_stocks()
 
         num_years = 5
         past_years = pd.date_range(end=date, periods=num_years, freq='Y')
+        acc_filter, acc_amplitude = pd.Series(), pd.Series()
         for idx, year_end in enumerate(past_years):
             year_start = year_end.replace(month=1, day=1)
             amplitude_filter, amplitude = analyzer.get_amplitude_filter(df, from_ts=year_start, to_ts=year_end,
@@ -50,7 +67,10 @@ class TwseOperator(Operator):
         result = pd.concat([df, acc_amplitude], axis='columns')
         return result[acc_filter]
 
-    def get_day_trade_candidates(self, date) -> pd.DataFrame:
+
+class DayTradeTwseOperator(TwseOperator):
+
+    def get_candidates(self, date) -> pd.DataFrame:
         analyzer = self._analyzer
 
         pruned_date = pd.to_datetime(date.strftime('%Y/%m/%d'), utc=True)
