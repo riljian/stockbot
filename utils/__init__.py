@@ -24,7 +24,7 @@ class AESEncoder:
     def pad(text):
         block_size = AES.block_size
         placeholder_len = block_size - len(text) % block_size
-        return text + (placeholder_len) * chr(placeholder_len)
+        return text + placeholder_len * chr(placeholder_len)
 
     @staticmethod
     def rm_pad(text):

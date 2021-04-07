@@ -29,6 +29,7 @@ logging.config.fileConfig(f'{BASE_DIR}/logging.ini',
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+# noinspection SpellCheckingInspection
 SECRET_KEY = 'j=c+9f*1c5veh$=!u+n9yo@8d@u*cxr%4vqck2!s6cbo@ey=ho'
 
 # SECURITY WARNING: don't run with debug turned on in production!
