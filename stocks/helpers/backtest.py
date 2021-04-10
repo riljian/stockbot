@@ -12,12 +12,17 @@ logger = logging.getLogger(__name__)
 
 class BackTest:
 
-    def __init__(self):
+    def __init__(self, operator):
         run_git_rev_parse = subprocess.run(['git', 'rev-parse', 'HEAD'], check=True, capture_output=True)
+        self.__operator = operator
         self.__commit = run_git_rev_parse.stdout.decode('utf-8').strip()
         self.__records = \
             pd.DataFrame(columns=['ts', 'stock', 'price', 'volume']).set_index(
                 ['ts', 'stock'])
+
+    @property
+    def operator(self):
+        return self.__operator
 
     def insert_record(self, **kwargs):
         volume = kwargs['volume']
@@ -59,9 +64,8 @@ class BackTest:
 class TwseDayTradeBackTest(BackTest):
 
     def __init__(self):
-        super().__init__()
+        super(TwseDayTradeBackTest, self).__init__(operators.DayTradeTwseOperator())
         self._kbars = {}
-        self._operator = operators.DayTradeTwseOperator()
         self._position = 0
 
     def start(self, from_date, to_date):
@@ -72,18 +76,18 @@ class TwseDayTradeBackTest(BackTest):
             super().start(from_ts, to_ts)
 
     def pick_stocks(self, from_ts) -> pd.DataFrame:
-        return self._operator.get_candidates(from_ts)
+        return self.operator.get_candidates(from_ts)
 
     def load_ticks(self, stock, from_ts, to_ts) -> pd.DataFrame:
-        return self._operator.brokerage.get_ticks(stock, from_ts, to_ts)
+        return self.operator.brokerage.get_ticks(stock, from_ts, to_ts)
 
     def setup(self, stock, from_ts, to_ts):
-        analyzer = self._operator.analyzer
+        analyzer = self.operator.analyzer
         self._kbars[stock.id] = analyzer.get_technical_indicator_filled_kbars(stock, from_ts, to_ts)
         logger.info(f'Stock {stock.code} initialized')
 
     def react(self, stock, tick_row):
-        analyzer = self._operator.analyzer
+        analyzer = self.operator.analyzer
         ts = tick_row.name
         price = tick_row['close']
         kbars = self._kbars[stock.id][:ts]
