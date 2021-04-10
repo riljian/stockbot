@@ -21,7 +21,7 @@ from stocks.views import StockViewSet
 
 
 router = routers.SimpleRouter()
-router.register(r'stocks', StockViewSet)
+router.register(r'exchanges/(?P<exchange_code>\w+)/stocks', StockViewSet)
 
 urlpatterns = [
     path('', include(router.urls))

@@ -4,6 +4,7 @@ import pandas as pd
 from caseconverter import pascalcase
 
 from rest_framework import viewsets, response, decorators
+from rest_framework import serializers
 
 from stocks.models import Stock
 import stocks.helpers.operator as operators
@@ -11,8 +12,21 @@ import stocks.helpers.operator as operators
 logger = logging.getLogger(__name__)
 
 
-class StockViewSet(viewsets.ViewSet):
+class StockCategoryNameField(serializers.CharField):
 
+    def to_representation(self, value):
+        return value.name
+
+
+class StockSerializer(serializers.ModelSerializer):
+    categories = serializers.ListSerializer(child=StockCategoryNameField())
+
+    class Meta:
+        model = Stock
+        fields = ('code', 'description', 'categories')
+
+
+class StockViewSet(viewsets.ViewSet):
     queryset = Stock.objects.all()
 
     @staticmethod
@@ -24,9 +38,13 @@ class StockViewSet(viewsets.ViewSet):
 
         return operator_cls()
 
+    def retrieve(self, request, exchange_code, pk):
+        stock = self.queryset.get(exchange__code=exchange_code, code=pk)
+        serializer = StockSerializer(stock)
+        return response.Response({'data': serializer.data})
+
     @decorators.action(detail=False, methods=['get'])
-    def conservative_candidates(self, request):
-        exchange_code = request.query_params.get('exchange')
+    def conservative_candidates(self, request, exchange_code):
         date = pd.to_datetime(request.query_params.get('date'), utc=True)
         operator = self.parse_operator(f'conservative {exchange_code}')
 
@@ -34,8 +52,7 @@ class StockViewSet(viewsets.ViewSet):
         return response.Response({'data': candidates.mask(candidates.isnull(), None).to_dict('records')})
 
     @decorators.action(detail=False, methods=['get'])
-    def day_trading_candidates(self, request):
-        exchange_code = request.query_params.get('exchange')
+    def day_trading_candidates(self, request, exchange_code):
         date = pd.to_datetime(request.query_params.get('date'), utc=True)
         operator = self.parse_operator(f'day trade {exchange_code}')
 
