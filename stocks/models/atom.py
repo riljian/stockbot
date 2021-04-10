@@ -5,6 +5,7 @@ from uuid import uuid4
 import pandas as pd
 from caseconverter import pascalcase
 from django.db import models
+from trading_calendars import get_calendar
 
 import stocks.helpers.brokerage as brokerages
 import stocks.helpers.crawler as crawlers
@@ -34,10 +35,17 @@ class Exchange(models.Model):
 
         self.init_crawler()
         self._brokerage = None
+        self._calendar = None
 
     @property
     def crawler(self):
         return self._crawler
+
+    @property
+    def calendar(self):
+        if self._calendar is None:
+            self._calendar = get_calendar(self.calendar_code)
+        return self._calendar
 
     @property
     def brokerage(self) -> brokerages.Brokerage:

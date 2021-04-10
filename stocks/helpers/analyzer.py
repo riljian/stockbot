@@ -5,7 +5,6 @@ import pandas as pd
 from pandas.tseries.frequencies import to_offset
 import talib
 from dateutil.tz import gettz
-from trading_calendars import get_calendar
 from django.db import models
 
 from stocks.models import DailySummary, Exchange
@@ -17,11 +16,10 @@ class Analyzer:
 
     def __init__(self, exchange):
         self._exchange = exchange
-        self._calendar = get_calendar(exchange.calendar_code)
 
     @property
     def calendar(self):
-        return self._calendar
+        return self.exchange.calendar
 
     @property
     def exchange(self):

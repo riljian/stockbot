@@ -9,7 +9,6 @@ from django.core.management.base import BaseCommand, CommandError
 
 import numpy as np
 import pandas as pd
-from trading_calendars import get_calendar
 
 from stocks.models import Exchange, Stock, DailySummary
 
@@ -95,7 +94,7 @@ class Command(BaseCommand):
             '%s %s: start to dump daily summary', exchange_code, date_text)
         date = self.parse_date(date_text)
 
-        if date not in get_calendar(self.__exchange.calendar_code).opens:
+        if date not in self.__exchange.calendar.opens:
             logger.info('%s %s: skipped', exchange_code, date_text)
             return
 
