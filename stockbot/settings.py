@@ -42,13 +42,21 @@ INSTALLED_APPS = [
     'stocks.apps.StocksConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
+    'corsheaders',
     'rest_framework',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # CorsMiddleware should be placed as high as possible,
+    # especially before any middleware that can generate responses such as Django's CommonMiddleware
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
 ]
 
+CORS_ALLOWED_ORIGINS = [
+    'null',  # For OpenAPI preview in PyCharm
+]
 ROOT_URLCONF = 'stockbot.urls'
 
 WSGI_APPLICATION = 'stockbot.wsgi.application'

@@ -1,0 +1,80 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "stockbot",
+    "description": "description",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8000",
+      "description": "Development server"
+    }
+  ],
+  "paths": {
+    "/exchanges/{exchangeCode}/stocks/{stockCode}/": {
+      "get": {
+        "parameters": [
+          {
+            "name": "exchangeCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "TWSE"
+          },
+          {
+            "name": "stockCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2610"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detail Information of the stock",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Stock"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Stock": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "format": "\\d+",
+            "required": true
+          },
+          "description": {
+            "type": "string"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}
