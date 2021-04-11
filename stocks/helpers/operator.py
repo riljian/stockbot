@@ -48,24 +48,33 @@ class ConservativeTwseOperator(TwseOperator):
     def get_candidates(self, date) -> pd.DataFrame:
         analyzer = self._analyzer
 
+        pruned_date = pd.to_datetime(date.strftime('%Y/%m/%d'), utc=True)
+        if pruned_date not in analyzer.calendar.opens:
+            return pd.DataFrame()
+
+        prev_trading_close = analyzer.calendar.previous_close(date)
+
         df = analyzer.get_stocks()
 
-        num_years = 5
-        past_years = pd.date_range(end=date, periods=num_years, freq='Y')
-        acc_filter, acc_amplitude = pd.Series(), pd.Series()
-        for idx, year_end in enumerate(past_years):
-            year_start = year_end.replace(month=1, day=1)
-            amplitude_filter, amplitude = analyzer.get_amplitude_filter(df, from_ts=year_start, to_ts=year_end,
-                                                                        min_amplitude=0.20)
-            if idx > 0:
-                acc_filter = acc_filter & amplitude_filter
-                acc_amplitude = acc_amplitude + amplitude
-            else:
-                acc_filter = amplitude_filter
-                acc_amplitude = amplitude
-        acc_amplitude = acc_amplitude / num_years
-        result = pd.concat([df, acc_amplitude], axis='columns')
-        return result[acc_filter]
+        # num_years = 5
+        # past_years = pd.date_range(end=date, periods=num_years, freq='Y')
+        # acc_filter, acc_amplitude = pd.Series(), pd.Series()
+        # for idx, year_end in enumerate(past_years):
+        #     year_start = year_end.replace(month=1, day=1)
+        #     amplitude_filter, amplitude = analyzer.get_amplitude_filter(df, from_ts=year_start, to_ts=year_end,
+        #                                                                 min_amplitude=0.20)
+        #     if idx > 0:
+        #         acc_filter = acc_filter & amplitude_filter
+        #         acc_amplitude = acc_amplitude + amplitude
+        #     else:
+        #         acc_filter = amplitude_filter
+        #         acc_amplitude = amplitude
+        # acc_amplitude = acc_amplitude / num_years
+        macd_signal_filter, _ = analyzer.get_macd_signal_filter(df, prev_trading_close)
+        investor_continuous_buy_filter, investor_continuous_buy_value = \
+            analyzer.get_investor_continuous_buy_filter(df, prev_trading_close)
+        result = pd.concat([df, investor_continuous_buy_value], axis='columns')
+        return result[macd_signal_filter & investor_continuous_buy_filter]
 
 
 class DayTradeTwseOperator(TwseOperator):
