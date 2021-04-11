@@ -48,3 +48,13 @@ class BackTestRecord(models.Model):
             models.Index(fields=['commit']),
             models.Index(fields=['commit', 'stock']),
         ]
+
+
+class ConservativeStrategyTestRecord(models.Model):
+    id = models.UUIDField(primary_key=True)
+    date = models.DateField()
+    stock = models.ForeignKey(
+        Stock, related_name='conservative_candidates', on_delete=models.CASCADE)
+    highest_in_30_days = models.FloatField()
+    investors = models.CharField(max_length=255)
+    continuous_days = models.IntegerField()
