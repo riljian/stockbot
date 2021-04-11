@@ -7,8 +7,10 @@ case-converter==1.0.2
 certifi==2020.12.5
 chardet==3.0.4
 cycler==0.10.0
+Cython==0.29.22
 decorator==4.4.2
 Django==3.1.6
+django-cors-headers==3.7.0
 djangorestframework==3.12.2
 finplot==1.6
 idna==2.8
