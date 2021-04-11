@@ -284,3 +284,21 @@ class TwseAnalyzer(Analyzer):
         summary = df.join(snapshot.set_index('stock_id'), on='id')
 
         return (summary['rsi'] >= min_value) & (summary['rsi'] <= max_value), summary['rsi']
+
+    def get_macd_signal_filter(self, df: pd.DataFrame, date) -> Tuple[pd.Series, pd.Series]:
+        stocks = Stock.objects.filter(daily_summaries__date=date)
+        snapshot = pd.DataFrame(columns=['stock_id', 'signal'])
+        timezone = self.exchange.brokerage.TIMEZONE
+        open_date = self.calendar.previous_close(date).tz_convert(timezone)
+        close_date = self.get_date_open_duration(date)['close']
+        for stock in stocks:
+            kbars = self.get_technical_indicator_filled_kbars(stock, open_date, close_date, interval='1D').reset_index()
+            len_kbars = len(kbars)
+            if len_kbars < 2:
+                logger.warning(f'Stock {stock.code} is skipped in get_macd_filter')
+                continue
+            record = {'stock_id': stock.pk, 'signal': kbars.at[0, 'macd_hist'] < 0 < kbars.at[1, 'macd_hist']}
+            snapshot = snapshot.append(record, ignore_index=True)
+        summary = df.join(snapshot.set_index('stock_id'), on='id')
+
+        return summary['signal'] == True, summary['signal']
