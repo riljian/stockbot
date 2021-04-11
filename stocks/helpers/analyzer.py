@@ -85,10 +85,10 @@ class TwseAnalyzer(Analyzer):
 
     def get_date_open_duration(self, date):
         timezone = self._exchange.brokerage.TIMEZONE
-        return [
-            pd.to_datetime(date.strftime('%Y-%m-%dT09:00:00')).tz_localize(timezone),
-            pd.to_datetime(date.strftime('%Y-%m-%dT14:30:00')).tz_localize(timezone),
-        ]
+        return {
+            'open': pd.to_datetime(date.strftime('%Y-%m-%dT09:00:00')).tz_localize(timezone),
+            'close': pd.to_datetime(date.strftime('%Y-%m-%dT13:30:00')).tz_localize(timezone),
+        }
 
     def get_kbars(self, stock, from_ts, to_ts, interval='1Min'):
         brokerage = self.exchange.brokerage
@@ -102,7 +102,8 @@ class TwseAnalyzer(Analyzer):
             return self.daily_summaries_to_kbars(daily_summaries, interval=interval)
         else:
             for date in pd.date_range(from_ts, to_ts, freq='D'):
-                ticks = ticks.append(brokerage.get_ticks(stock, *self.get_date_open_duration(date)))
+                duration = self.get_date_open_duration(date)
+                ticks = ticks.append(brokerage.get_ticks(stock, duration['open'], duration['close']))
             return self.ticks_to_kbars(ticks, interval=interval)
 
     def get_technical_indicator_filled_kbars(self, stock, from_ts, to_ts, interval='1Min'):
@@ -111,9 +112,10 @@ class TwseAnalyzer(Analyzer):
         if self.get_is_interval_over_a_day(interval):
             # FIXME: remove magic number
             kbar_from_ts = calendar.opens[:date_only_from_ts][-80]
-            from_ts = date_only_from_ts
+            data_filter_from_ts = date_only_from_ts
         else:
             kbar_from_ts = calendar.opens[:date_only_from_ts][-1]
+            data_filter_from_ts = from_ts
         kbars = self.get_kbars(stock, kbar_from_ts, to_ts, interval=interval)
 
         rsi_series = talib.RSI(kbars['close'], timeperiod=14).rename('rsi')
@@ -123,7 +125,7 @@ class TwseAnalyzer(Analyzer):
         macd_hist_series = macd_hist.rename('macd_hist')
 
         total_series = [kbars, rsi_series, macd_series, macd_signal_series, macd_hist_series]
-        result = pd.concat(total_series, axis='columns')[from_ts:to_ts]
+        result = pd.concat(total_series, axis='columns')[data_filter_from_ts:to_ts]
         return result.dropna()
 
     def setup_plot(self, plot_title, kbars):
@@ -272,9 +274,8 @@ class TwseAnalyzer(Analyzer):
         stocks = Stock.objects.filter(daily_summaries__date=date)
         snapshot = pd.DataFrame(columns=['stock_id', 'rsi'])
         for stock in stocks:
-            kbars = self.get_technical_indicator_filled_kbars(stock,
-                                                              *self.get_date_open_duration(date),
-                                                              interval='1D')
+            duration = self.get_date_open_duration(date)
+            kbars = self.get_technical_indicator_filled_kbars(stock, duration['open'], duration['close'], interval='1D')
             if kbars.empty:
                 logger.warning(f'Stock {stock.code} is skipped in get_rsi_filter')
                 continue
