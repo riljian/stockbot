@@ -12,26 +12,31 @@
     }
   ],
   "paths": {
+    "/exchanges/{exchangeCode}/stocks/conservative_candidates/": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/exchangeCode"
+          },
+          {
+            "$ref": "#/components/parameters/date"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of conservative candidates"
+          }
+        }
+      }
+    },
     "/exchanges/{exchangeCode}/stocks/{stockCode}/": {
       "get": {
         "parameters": [
           {
-            "name": "exchangeCode",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "example": "TWSE"
+            "$ref": "#/components/parameters/exchangeCode"
           },
           {
-            "name": "stockCode",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "example": "2610"
+            "$ref": "#/components/parameters/stockCode"
           }
         ],
         "responses": {
@@ -61,8 +66,7 @@
         "properties": {
           "code": {
             "type": "string",
-            "format": "\\d+",
-            "required": true
+            "format": "\\d+"
           },
           "description": {
             "type": "string"
@@ -74,6 +78,35 @@
             }
           }
         }
+      }
+    },
+    "parameters": {
+      "exchangeCode":{
+        "name": "exchangeCode",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "example": "TWSE"
+      },
+      "stockCode":{
+        "name": "stockCode",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "example": "2610"
+      },
+      "date": {
+        "name": "date",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "format": "\\d{8}"
+        },
+        "example": "20210412"
       }
     }
   }

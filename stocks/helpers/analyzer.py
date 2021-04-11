@@ -7,7 +7,7 @@ import talib
 from dateutil.tz import gettz
 from django.db import models
 
-from stocks.models import DailySummary, Exchange
+from stocks.models import DailySummary, Exchange, Stock
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,9 @@ class TwseAnalyzer(Analyzer):
         calendar = self.calendar
         date_only_from_ts = from_ts.replace(hour=0, minute=0, second=0, microsecond=0)
         if self.get_is_interval_over_a_day(interval):
-            kbar_from_ts = calendar.opens[:date_only_from_ts][-33]
+            # FIXME: remove magic number
+            kbar_from_ts = calendar.opens[:date_only_from_ts][-80]
+            from_ts = date_only_from_ts
         else:
             kbar_from_ts = calendar.opens[:date_only_from_ts][-1]
         kbars = self.get_kbars(stock, kbar_from_ts, to_ts, interval=interval)
@@ -121,8 +123,8 @@ class TwseAnalyzer(Analyzer):
         macd_hist_series = macd_hist.rename('macd_hist')
 
         total_series = [kbars, rsi_series, macd_series, macd_signal_series, macd_hist_series]
-
-        return pd.concat(total_series, axis='columns')[from_ts:to_ts].dropna()
+        result = pd.concat(total_series, axis='columns')[from_ts:to_ts]
+        return result.dropna()
 
     def setup_plot(self, plot_title, kbars):
         import finplot as fplt
@@ -265,3 +267,19 @@ class TwseAnalyzer(Analyzer):
         ordered_summary = df.join(summary, on='id')
 
         return ordered_summary['is_buy'] == True, ordered_summary[total_volume_key]
+
+    def get_rsi_filter(self, df: pd.DataFrame, date, min_value=0.0, max_value=100.0) -> Tuple[pd.Series, pd.Series]:
+        stocks = Stock.objects.filter(daily_summaries__date=date)
+        snapshot = pd.DataFrame(columns=['stock_id', 'rsi'])
+        for stock in stocks:
+            kbars = self.get_technical_indicator_filled_kbars(stock,
+                                                              *self.get_date_open_duration(date),
+                                                              interval='1D')
+            if kbars.empty:
+                logger.warning(f'Stock {stock.code} is skipped in get_rsi_filter')
+                continue
+            snapshot = snapshot.append({'stock_id': stock.pk, 'rsi': kbars.reset_index().at[0, 'rsi']},
+                                       ignore_index=True)
+        summary = df.join(snapshot.set_index('stock_id'), on='id')
+
+        return (summary['rsi'] >= min_value) & (summary['rsi'] <= max_value), summary['rsi']
